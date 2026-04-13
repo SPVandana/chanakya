@@ -805,7 +805,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
           <table class="wbs-tbl" id="wbsTbl">
             <thead><tr>
               <th onclick="srtW('id')" style="width:58px;text-align:center" title="WBS ID">WBS ID</th>
-              <th onclick="srtW('name')" style="min-width:220px;text-align:left">Task Name</th>
+              <th style="min-width:220px;text-align:left;cursor:default">Task Name</th>
               <th onclick="srtW('status')" style="width:110px;text-align:center">Status</th>
               <th onclick="srtW('priority')" style="width:80px;text-align:center">Priority</th>
               <th onclick="srtW('assignee')" style="width:130px;text-align:left">Assignee</th>
@@ -1154,7 +1154,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         <div class="fg"><label class="fl">Actual End <span style="font-size:9px;color:var(--text-muted);font-weight:400">(optional)</span></label><input type="date" class="fii" id="tm-actual-end"></div>
       </div>
       <div class="fr3">
-        <div class="fg"><label class="fl">Assignee</label><input class="fii" id="tm-assignee" placeholder="Name" list="alist"><datalist id="alist"></datalist></div>
+        <div class="fg"><label class="fl">Assignee</label><input class="fii" id="tm-assignee" value="Site Team" readonly><datalist id="alist"></datalist></div>
         <input type="hidden" id="tm-cost" value="0"><!-- Cost hidden: no budget data yet -->
         <input type="hidden" id="tm-ms" value="0">
       </div>
@@ -1163,7 +1163,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         <div class="fg"><label class="fl">Constraint</label><select class="fss" id="tm-constraint"><option value="asap">As Soon As Possible</option><option value="alap">As Late As Possible</option><option value="mso">Must Start On</option><option value="mfo">Must Finish On</option><option value="snet">Start No Earlier Than</option><option value="fnet">Finish No Earlier Than</option></select></div>
       </div>
       <div class="fg"><label class="fl">Notes</label>
-        <div class="notes-list" id="tmNotesList" style="min-height:16px"></div>
+        <div class="notes-list" id="tmNotesList"></div>
         <div class="note-add-row" style="margin-top:2px">
           <input id="tmNoteInput" placeholder="Add a note…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNoteFromModal();}">
           <button class="btn btn-ghost btn-sm" onclick="addNoteFromModal()">Add</button>
@@ -6102,6 +6102,19 @@ function _restorePlannerStoreFromCache(){
   // Apply any planner data fetched from server before _PT was declared
   if(_C._pendingPlanner){Object.assign(_PT,_C._pendingPlanner);delete _C._pendingPlanner;}
 }
+function _enforceSiteTeamAssigneeOnAllTasks(){
+  const all=Store.getAllTasks();
+  let changed=false;
+  const next={};
+  Object.keys(all||{}).forEach(pid=>{
+    next[pid]=(all[pid]||[]).map(t=>{
+      if((t.assignee||'')==='Site Team')return t;
+      changed=true;
+      return {...t,assignee:'Site Team'};
+    });
+  });
+  if(changed)Store.saveTasksMap(next);
+}
 async function boot(){
   const loadEl=$('appLoading');
   if(loadEl)loadEl.style.display='flex';
@@ -6120,6 +6133,7 @@ async function boot(){
   // Phase 1 fix: removed special-case deletion of VM001/VM002 localStorage data.
   // The smart merge below handles all projects uniformly — user edits to model villas now persist.
   _reconcileStoredTaskCacheIntoFresh();
+  _enforceSiteTeamAssigneeOnAllTasks();
   // Sync all project statuses from task progress on load
   Object.keys(Store.getProjects()).forEach(pid=>syncProjStatus(pid));
   if(loadEl)loadEl.style.display='none';
@@ -6652,10 +6666,10 @@ function renderWBS(){
   phOrder.forEach(phId=>{
     const ph=grp[phId];
     const allPhTs=ph.spOrder.flatMap(sid=>ph.sps[sid].tasks);
-    // Phase level: count-based X/Y done
+    // Phase level progress: duration-weighted completion from underlying subtasks
     const phDone=allPhTs.filter(t=>t.status==='completed').length;
     const phTotal=allPhTs.length;
-    const phCountPct=phTotal?Math.round(phDone/phTotal*100):0;
+    const phPct=_wPct(allPhTs);
     const phStarts=allPhTs.map(t=>t.startDate).filter(Boolean).sort();
     const phEnds=allPhTs.map(t=>t.endDate).filter(Boolean).sort();
     const phS=phStarts[0]||'';const phE=phEnds[phEnds.length-1]||'';
@@ -6677,8 +6691,8 @@ function renderWBS(){
       <td style="font-size:11px;color:var(--text-muted);text-align:center">${phDur?phDur+'d':'—'}</td>
       <td></td><td></td><td></td>
       <td><div style="display:flex;align-items:center;gap:4px">
-        <div class="prog" style="width:48px;margin:0"><div class="prog-fill" style="width:${phCountPct}%"></div></div>
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)">${phDone}/${phTotal}</span>
+        <div class="prog" style="width:48px;margin:0"><div class="prog-fill" style="width:${phPct}%"></div></div>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);font-weight:600">${phPct}%</span>
       </div></td>
       <td></td>
     </tr>`;
@@ -6776,6 +6790,7 @@ function renderWBS(){
 }
 
 function srtW(col){
+  if(col==='name')return;
   S.sort.dir=S.sort.col===col?(S.sort.dir==='asc'?'desc':'asc'):'asc';
   S.sort.col=col;
   document.querySelectorAll('.wbs-tbl thead th').forEach(th=>th.classList.remove('sa','sd'));
@@ -7109,7 +7124,8 @@ function _tmSetMode(mode){
 function openAddTask(){
   if(!S.proj)return toast('Open a project first','error');
   $('tmTitle').textContent='Add Task';$('tmEId').value='';
-  ['tm-name','tm-assignee','tm-preds'].forEach(id=>$(id)&&($(id).value=''));
+  ['tm-name','tm-preds'].forEach(id=>$(id)&&($(id).value=''));
+  $('tm-assignee').value='Site Team';
   _renderNotesList('tmNotesList',[]);const _ni=$('tmNoteInput');if(_ni)_ni.value='';
   $('tm-status').value='not-started';$('tm-priority').value='medium';
   $('tm-progress').value=0;$('tm-cost').value=0;$('tm-ms').value=0;
@@ -7124,7 +7140,7 @@ function openEditTask(id){
   const ts=Store.getTasksByProject(S.proj?.id);const t=ts.find(x=>x.id===id);if(!t)return;
   $('tmTitle').textContent='Edit Task';$('tmEId').value=t.id;
   $('tm-name').value=t.name;$('tm-status').value=t.status;$('tm-priority').value=t.priority;
-  $('tm-progress').value=t.progress||0;$('tm-assignee').value=t.assignee||'';
+  $('tm-progress').value=t.progress||0;$('tm-assignee').value='Site Team';
   $('tm-cost').value=t.cost||0;$('tm-ms').value=t.milestone||0;$('tm-constraint').value=t.constraint||'asap';
   // In edit mode: Start/End fields = Actual Start/End.
   // Populate with stored actual dates, falling back to planned dates for older tasks.
@@ -7260,6 +7276,11 @@ function normalizeProgressStatus(task){
   task.status=deriveStatusFromProgress(p);
   return task;
 }
+function normalizeAssignee(task){
+  if(!task)return task;
+  task.assignee='Site Team';
+  return task;
+}
 function stampActualDates(task,previousTask,todayISO){
   if(!task)return task;
   const today=todayISO||_todayISO();
@@ -7393,6 +7414,7 @@ const TaskService={
   },
   _normalizeAndValidate(task,prev,today){
     const next={...task};
+    normalizeAssignee(next);
     normalizeProgressStatus(next);
     stampActualDates(next,prev||null,today||_todayISO());
     recomputeDuration(next);
@@ -7467,7 +7489,7 @@ const TaskService={
     }
     const data={phaseId:_phId,phaseName:_phName,subphaseId:_spId,subphaseName:_spName,
       name:form.name,status:form.status,priority:form.priority,progress:_autoProg,
-      assignee:form.assignee,cost:Number(form.cost)||0,milestone:Number(form.milestone),
+      assignee:'Site Team',cost:Number(form.cost)||0,milestone:Number(form.milestone),
       constraint:form.constraint||existT?.constraint||'asap',duration:existT?.duration||1,
       startDate:_startDate,endDate:_endDate,predecessors:preds,
       actualStartDate:_actualStartDate,actualEndDate:_actualEndDate};
@@ -7644,6 +7666,7 @@ const TaskService={
     if(!pid||!Array.isArray(tasks))return this._fail(this.ERR.INVALID_PAYLOAD,'Invalid import payload');
     const cleaned=tasks.map(t=>{
       const x={...t};
+      normalizeAssignee(x);
       normalizeProgressStatus(x);
       recomputeDuration(x);
       return x;
@@ -7705,7 +7728,7 @@ function saveTask(){
     progress:$('tm-progress').value,
     status:$('tm-status').value,
     priority:$('tm-priority').value,
-    assignee:$('tm-assignee').value,
+    assignee:'Site Team',
     cost:$('tm-cost').value,
     milestone:$('tm-ms').value,
     constraint:$('tm-constraint').value,
