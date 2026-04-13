@@ -6058,6 +6058,42 @@ function swTab(btn,id){
 // ============================================================
 //  DASHBOARD
 // ============================================================
+function _shouldReplaceFreshWithStoredTasks(stored,fresh){
+  const freshIds=new Set((fresh||[]).map(t=>t.id));
+  const storedIds=(stored||[]).map(t=>t.id);
+  const overlap=storedIds.filter(id=>freshIds.has(id)).length;
+  return (stored.length>=fresh.length) && (overlap/stored.length>=0.7);
+}
+function _mergeStoredTaskEditsIntoFresh(stored,fresh){
+  const sm={};(stored||[]).forEach(t=>{sm[t.id]=t;});
+  return (fresh||[]).map(t=>{
+    const s=sm[t.id];if(!s)return t;
+    // Apply user-edited fields on top of canonical task definition
+    return Object.assign({},t,{progress:s.progress,status:s.status,notes:s.notes,
+      startDate:s.startDate,endDate:s.endDate,assignee:s.assignee,
+      priority:s.priority,cost:s.cost});
+  });
+}
+function _reconcileStoredTaskCacheIntoFresh(){
+  if(!_C.tasks||!Object.keys(_C.tasks).length)return;
+  Object.keys(_C.tasks).forEach(pid=>{
+    const stored=_C.tasks[pid];
+    const fresh=_realTasks[pid];
+    if(!stored||!stored.length)return;
+    if(!fresh||!fresh.length){_realTasks[pid]=stored;return;}
+    if(_shouldReplaceFreshWithStoredTasks(stored,fresh)){
+      // Stored has same or more tasks with mostly matching IDs — keep user-modified cache.
+      _realTasks[pid]=stored;
+      return;
+    }
+    if(stored.length<fresh.length){
+      // Stored has fewer tasks than fresh (stale truncated cache): merge edits into fresh.
+      _realTasks[pid]=_mergeStoredTaskEditsIntoFresh(stored,fresh);
+      return;
+    }
+    // Stored has same/more tasks but weak ID overlap — fresh data likely changed, keep fresh.
+  });
+}
 async function boot(){
   const loadEl=$('appLoading');
   if(loadEl)loadEl.style.display='flex';
@@ -6081,35 +6117,7 @@ async function boot(){
   // if stored task count < fresh task count, merge edits into fresh list instead of replacing
   // Phase 1 fix: removed special-case deletion of VM001/VM002 localStorage data.
   // The smart merge below handles all projects uniformly — user edits to model villas now persist.
-  if(_C.tasks&&Object.keys(_C.tasks).length){
-    Object.keys(_C.tasks).forEach(pid=>{
-      const stored=_C.tasks[pid];
-      const fresh=_realTasks[pid];
-      if(!stored||!stored.length)return;
-      if(!fresh||!fresh.length){_realTasks[pid]=stored;return;}
-      // Check if stored task IDs match fresh — if not, fresh data has changed, prefer fresh
-      const freshIds=new Set(fresh.map(t=>t.id));
-      const storedIds=stored.map(t=>t.id);
-      const overlap=storedIds.filter(id=>freshIds.has(id)).length;
-      if(stored.length>=fresh.length&&overlap/stored.length<0.7){
-        // Stored IDs don't match fresh — fresh data was replaced, use fresh
-        // (skip stored)
-      } else if(stored.length>=fresh.length){
-        // Stored has same or more tasks — use directly (user may have added tasks)
-        _realTasks[pid]=stored;
-      } else {
-        // Stored has fewer tasks than fresh (stale truncated cache): merge edits into fresh
-        const sm={};stored.forEach(t=>{sm[t.id]=t;});
-        _realTasks[pid]=fresh.map(t=>{
-          const s=sm[t.id];if(!s)return t;
-          // Apply user-edited fields on top of canonical task definition
-          return Object.assign({},t,{progress:s.progress,status:s.status,notes:s.notes,
-            startDate:s.startDate,endDate:s.endDate,assignee:s.assignee,
-            priority:s.priority,cost:s.cost});
-        });
-      }
-    });
-  }
+  _reconcileStoredTaskCacheIntoFresh();
   // Sync all project statuses from task progress on load
   Object.keys(Store.getProjects()).forEach(pid=>syncProjStatus(pid));
   if(loadEl)loadEl.style.display='none';
@@ -6972,8 +6980,8 @@ function _renderNotesList(containerId,notes){
   el.innerHTML=arr.map(n=>`<div class="note-item"><div class="note-meta">${_esc(n.author||'Team')}${n.dt?' · '+fmtDt(n.dt):''}</div><div class="note-text">${_esc(n.text)}</div></div>`).join('');
   el.scrollTop=el.scrollHeight;
 }
-// Append a note to a task — persists immediately to localStorage.
-// Syncs to both _realTasks (main store) and _PT (Planner store) if present.
+// Append a note to a task — persists immediately.
+// Syncs to Store task data and _PT (Planner store) if present.
 function _addNote(pid,taskId,text,author){
   if(!pid||!taskId||!text||!String(text).trim())return;
   const ts=Store.getTasksByProject(pid);
@@ -6987,7 +6995,7 @@ function _addNote(pid,taskId,text,author){
   if(_PT[pid]){
     const pt=_PT[pid].find(t=>t.id===taskId);
     if(pt)pt.notes=arr;
-    try{localStorage.setItem('_cky_planner',JSON.stringify(_PT));}catch(e){}
+    _persistPlannerStore();
   }
 }
 // Add note from Task Side Panel
@@ -8890,11 +8898,14 @@ let _pUndo={};
 
 // ── Get / init plan tasks for a project
 function _pData(pid){ if(!_PT[pid])_PT[pid]=[]; return _PT[pid]; }
+function _pHas(pid){ return !!_PT[pid]; }
+function _pReplace(pid,tasks){ _PT[pid]=tasks||[]; return _PT[pid]; }
+function _persistPlannerStore(){ try{localStorage.setItem('_cky_planner',JSON.stringify(_PT));}catch(e){} }
 // Phase 1 fix: _pSet now auto-syncs to _realTasks and persists _PT to localStorage
 // This ensures Planner edits are visible in Task Sheet, Gantt, and Reports,
 // and survive page refresh without requiring a manual "export to task sheet" action
 function _pSet(pid,tasks){
-  _PT[pid]=tasks;
+  _pReplace(pid,tasks);
   // Sync to main task store — strip planner-only computed fields, ensure both
   // date formats are populated so Task Sheet, Gantt, and Baselines all see dates.
   const prevMap=new Map((Store.getTasksByProject(pid)||[]).map(t=>[t.id,t]));
@@ -8912,7 +8923,7 @@ function _pSet(pid,tasks){
   if(_hasDependencyCycle(syncTasks)){toast('Invalid dependency: cycle detected','error');return;}
   Store.saveProjectTasks(pid,syncTasks);
   // Persist planner state separately so collapse/indent/ordering survive refresh
-  try{localStorage.setItem('_cky_planner',JSON.stringify(_PT));}catch(e){}
+  _persistPlannerStore();
 }
 
 // ── Push undo snapshot
@@ -9452,20 +9463,21 @@ function planOutdent(){
   renderPlanner();
 }
 
-// ── Sync _PT ordering to match _realTasks ordering (Phase 4)
+// ── Sync _PT ordering to match canonical task ordering (Phase 4)
 // Called after Task Sheet mvUp/mvDn so the Planner stays ordered consistently.
 // Preserves all Planner-specific fields (indent, isSummary, collapsed, etc.)
-// while reordering rows to match the canonical _realTasks sequence.
+// while reordering rows to match the canonical task sequence from Store.
 function _syncPTOrder(pid){
   const rtTasks=Store.getTasksByProject(pid);
-  if(!_PT[pid]||!rtTasks.length)return;
+  if(!_pHas(pid)||!rtTasks.length)return;
   const rtOrder=rtTasks.map(t=>t.id);
-  const ptMap=new Map(_PT[pid].map(t=>[t.id,t]));
-  // Rebuild PT in _realTasks order; any PT-only tasks (not yet in _realTasks) go at end
+  const rtSet=new Set(rtOrder);
+  const ptMap=new Map(_pData(pid).map(t=>[t.id,t]));
+  // Rebuild PT in canonical task order; any PT-only tasks go at end
   const reordered=rtOrder.map(id=>ptMap.get(id)).filter(Boolean);
-  _PT[pid].forEach(t=>{if(!rtOrder.includes(t.id))reordered.push(t);});
-  _PT[pid]=reordered;
-  try{localStorage.setItem('_cky_planner',JSON.stringify(_PT));}catch(e){}
+  _pData(pid).forEach(t=>{if(!rtSet.has(t.id))reordered.push(t);});
+  _pReplace(pid,reordered);
+  _persistPlannerStore();
 }
 // ── Move row up
 function planMoveUp(){
@@ -9921,7 +9933,7 @@ document.addEventListener('keydown',function(e){
   else if(e.key==='z'&&(e.ctrlKey||e.metaKey)){
     e.preventDefault();
     if(_pUndo[pid]&&_pUndo[pid].length){
-      _PT[pid]=JSON.parse(_pUndo[pid].pop());
+      _pReplace(pid,JSON.parse(_pUndo[pid].pop()));
       renderPlanner(); toast('Undo','success');
     }
   }
