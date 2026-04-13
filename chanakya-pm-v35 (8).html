@@ -6779,7 +6779,7 @@ function collapseAll(){const ts=Store.getTasksByProject(S.proj?.id);ts.forEach(t
 function onRowCk(e,id){if(e.ctrlKey||e.metaKey){S.sel.has(id)?S.sel.delete(id):S.sel.add(id);renderWBS();}else openTP(id);}
 
 function cycSt(id){
-  const ts=[...(_realTasks[S.proj.id]||[])];
+  const ts=Store.getTasksByProject(S.proj.id);
   const t=ts.find(x=>x.id===id);if(!t)return;
   // Fix 5: Tasks use only 3 states via quick-cycle.
   // blocked / on-hold remain available in the edit modal but not in the badge cycle.
@@ -6976,7 +6976,7 @@ function _renderNotesList(containerId,notes){
 // Syncs to both _realTasks (main store) and _PT (Planner store) if present.
 function _addNote(pid,taskId,text,author){
   if(!pid||!taskId||!text||!String(text).trim())return;
-  const ts=[...(_realTasks[pid]||[])];
+  const ts=Store.getTasksByProject(pid);
   const i=ts.findIndex(t=>t.id===taskId);if(i<0)return;
   const entry={text:String(text).trim(),dt:new Date().toISOString(),author:author||'Team'};
   const arr=[..._notesArray(ts[i].notes),entry];
@@ -6997,7 +6997,7 @@ function addNoteFromTP(){
   _addNote(S.proj.id,S.task.id,txt,'Team');
   if(inp)inp.value='';
   // Re-render notes list
-  const updated=(_realTasks[S.proj.id]||[]).find(t=>t.id===S.task.id);
+  const updated=Store.getTasksByProject(S.proj.id).find(t=>t.id===S.task.id);
   _renderNotesList('tpNotesList',updated?.notes);
 }
 // Add note from Task Edit Modal (saves immediately, independent of Save Task)
@@ -7007,7 +7007,7 @@ function addNoteFromModal(){
   const inp=$('tmNoteInput');const txt=inp?.value||'';if(!txt.trim())return;
   _addNote(S.proj.id,eid,txt,'Team');
   if(inp)inp.value='';
-  const updated=(_realTasks[S.proj.id]||[]).find(t=>t.id===eid);
+  const updated=Store.getTasksByProject(S.proj.id).find(t=>t.id===eid);
   _renderNotesList('tmNotesList',updated?.notes);
 }
 // Add note from Planner Task Panel
@@ -7017,7 +7017,7 @@ function addNoteFromPlanTP(){
   const inp=$('planTPNoteInput');const txt=inp?.value||'';if(!txt.trim())return;
   _addNote(pid,tid,txt,'Team');
   if(inp)inp.value='';
-  const updated=(_realTasks[pid]||[]).find(t=>t.id===tid);
+  const updated=Store.getTasksByProject(pid).find(t=>t.id===tid);
   _renderNotesList('planTPNotesList',updated?.notes);
 }
 function addPred(){
@@ -8897,7 +8897,7 @@ function _pSet(pid,tasks){
   _PT[pid]=tasks;
   // Sync to main task store — strip planner-only computed fields, ensure both
   // date formats are populated so Task Sheet, Gantt, and Baselines all see dates.
-  const prevMap=new Map(((_realTasks[pid]||[])).map(t=>[t.id,t]));
+  const prevMap=new Map((Store.getTasksByProject(pid)||[]).map(t=>[t.id,t]));
   const syncTasks=tasks.map(t=>{
     const {_es,_ef,_ls,_lf,_float,isCritical,...rest}=t;
     // Map Planner date fields (start/end) → Task Sheet fields (startDate/endDate)
@@ -9457,8 +9457,9 @@ function planOutdent(){
 // Preserves all Planner-specific fields (indent, isSummary, collapsed, etc.)
 // while reordering rows to match the canonical _realTasks sequence.
 function _syncPTOrder(pid){
-  if(!_PT[pid]||!_realTasks[pid])return;
-  const rtOrder=_realTasks[pid].map(t=>t.id);
+  const rtTasks=Store.getTasksByProject(pid);
+  if(!_PT[pid]||!rtTasks.length)return;
+  const rtOrder=rtTasks.map(t=>t.id);
   const ptMap=new Map(_PT[pid].map(t=>[t.id,t]));
   // Rebuild PT in _realTasks order; any PT-only tasks (not yet in _realTasks) go at end
   const reordered=rtOrder.map(id=>ptMap.get(id)).filter(Boolean);
@@ -12002,7 +12003,7 @@ function _selfTest(){
   assert('Cascade preserves successor duration', _scB&&_scB.duration===2, `got ${_scB&&_scB.duration}`);
   const _scNoop=Scheduler.cascadeTaskSheet(_scPid);
   assert('Cascade no-op reports changed=false', _scNoop===false, `got ${_scNoop}`);
-  Store.saveProjectTasks(_scPid,[]);delete _realTasks[_scPid];
+  Store.saveProjectTasks(_scPid,[]);
   console.groupEnd();
 
   // ── BLOCK 5: Task Data Validation
@@ -12063,7 +12064,7 @@ function _selfTest(){
   assert('Round-trip: task name preserved', _rtTasks[0]&&_rtTasks[0].name==='Test Task');
   assert('Round-trip: task id preserved',   _rtTasks[0]&&_rtTasks[0].id==='st-T1');
   // Clean up test data
-  Store.saveProjectTasks(_testPid,[]);delete _realTasks[_testPid];
+  Store.saveProjectTasks(_testPid,[]);
   console.groupEnd();
 
   // ── BLOCK 9: TaskService result-shape smoke tests
@@ -12089,7 +12090,7 @@ function _selfTest(){
   const rs5=TaskService.cycleTaskStatus(_tsPid,'missing-task');
   assert('TaskService.cycleTaskStatus failure shape', hasShape(rs5)&&rs5.ok===false, JSON.stringify(rs5));
   assert('TaskService.cycleTaskStatus failure code', hasCode(rs5)&&rs5.code===TaskService.ERR.TASK_NOT_FOUND, JSON.stringify(rs5));
-  Store.saveProjectTasks(_tsPid,[]);delete _realTasks[_tsPid];
+  Store.saveProjectTasks(_tsPid,[]);
   delete _PT[_tsPid];
   console.groupEnd();
 
