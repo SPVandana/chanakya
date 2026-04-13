@@ -1628,10 +1628,16 @@ const Store={
   getResources(){ return DB.res(); },
   getAllTasks(){ return DB.tasks(); },
   getTasksByProject(pid){ return DB.tasks()[pid]||[]; },
+  getBaselinesMap(){ return (typeof _blStore!=='undefined'&&_blStore)?_blStore:{}; },
   saveProjectTasks(pid,tasks){ DB.sTasks({[pid]:tasks}); },
   saveTasksMap(tasksMap){ DB.sTasks(tasksMap); },
   saveProjects(projs){ DB.sProjs(projs); },
   saveResources(res){ DB.sRes(res); },
+  saveBaselinesMap(blMap){
+    if(typeof _blStore!=='undefined') _blStore=blMap||{};
+    try{ localStorage.setItem('_cky_bl',JSON.stringify(blMap||{})); }catch(e){}
+    _scheduleSave();
+  },
   setMeta(k,v){ DB.set(k,v); },
   flush(){ DB.save(); },
 };
@@ -7371,35 +7377,52 @@ const TaskService={
     }
     return Object.assign({ok:false,code,error},ext);
   },
-  updateTask(pid,taskId,changes){
-    if(!pid||!taskId||!changes)return this._fail(this.ERR.INVALID_PAYLOAD,'Invalid task update payload');
-    const ts=[...(_realTasks[pid]||[])];
-    const i=ts.findIndex(t=>t.id===taskId);
-    if(i<0)return this._fail(this.ERR.TASK_NOT_FOUND,'Task not found');
-    const prev={...ts[i]};
-    const merged={...ts[i],...changes};
-    normalizeProgressStatus(merged);
-    stampActualDates(merged,prev,_todayISO());
-    recomputeDuration(merged);
-    const vr=_validateTaskData(merged);
+  _getTasks(pid){
+    return [...Store.getTasksByProject(pid)];
+  },
+  _normalizeAndValidate(task,prev,today){
+    const next={...task};
+    normalizeProgressStatus(next);
+    stampActualDates(next,prev||null,today||_todayISO());
+    recomputeDuration(next);
+    const vr=_validateTaskData(next);
     if(!vr.ok){
-      console.warn('[CKY] updateTask validation failed:',vr.errors);
-      toast(vr.errors[0],'error');
-      return this._fail(this.ERR.VALIDATION_FAILED,vr.errors[0]||'Validation failed');
+      const msg=vr.errors&&vr.errors[0]?vr.errors[0]:'Validation failed';
+      return this._fail(this.ERR.VALIDATION_FAILED,msg);
     }
-    ts[i]=merged;
+    return this._ok({task:next});
+  },
+  _persistTaskList(pid,ts,opts){
     if(_hasDependencyCycle(ts)){
-      toast('Invalid dependency: cycle detected','error');
       return this._fail(this.ERR.CYCLE_DETECTED,'Invalid dependency: cycle detected');
     }
     Store.saveProjectTasks(pid,ts);
+    if(opts&&opts.cascade) Scheduler.cascadeTaskSheet(pid);
+    return this._ok((opts&&opts.extra)||{});
+  },
+  updateTask(pid,taskId,changes){
+    if(!pid||!taskId||!changes)return this._fail(this.ERR.INVALID_PAYLOAD,'Invalid task update payload');
+    const ts=this._getTasks(pid);
+    const i=ts.findIndex(t=>t.id===taskId);
+    if(i<0)return this._fail(this.ERR.TASK_NOT_FOUND,'Task not found');
+    const prev={...ts[i]};
+    const normalized=this._normalizeAndValidate({...ts[i],...changes},prev,_todayISO());
+    if(!normalized.ok){
+      console.warn('[CKY] updateTask validation failed:',normalized.error);
+      toast(normalized.error,'error');
+      return normalized;
+    }
+    ts[i]=normalized.task;
     const cascadeFields=['startDate','endDate','duration','predecessors'];
-    if(Object.keys(changes).some(k=>cascadeFields.includes(k))) Scheduler.cascadeTaskSheet(pid);
-    return this._ok();
+    const persistRs=this._persistTaskList(pid,ts,{cascade:Object.keys(changes).some(k=>cascadeFields.includes(k))});
+    if(!persistRs.ok&&persistRs.code===this.ERR.CYCLE_DETECTED){
+      toast('Invalid dependency: cycle detected','error');
+    }
+    return persistRs;
   },
   saveTaskFromModal(pid,form){
     if(!pid||!form)return this._fail(this.ERR.INVALID_PAYLOAD,'Invalid modal payload');
-    const ts=[...(_realTasks[pid]||[])];
+    const ts=this._getTasks(pid);
     const eid=form.editId||'';
     const isEdit=!!eid;
     const existT=eid?ts.find(t=>t.id===eid):null;
@@ -7440,27 +7463,22 @@ const TaskService={
     if(eid){
       const i=ts.findIndex(t=>t.id===eid);
       if(i>=0){
-        const merged={...ts[i],...data};
-        normalizeProgressStatus(merged);
-        stampActualDates(merged,ts[i],_today);
-        recomputeDuration(merged);
-        ts[i]=merged;
+        const normalized=this._normalizeAndValidate({...ts[i],...data},ts[i],_today);
+        if(!normalized.ok)return normalized;
+        ts[i]=normalized.task;
       }
     }else{
       const nId=`${pid}-T${String(ts.length+1).padStart(4,'0')}`;
       const created={id:nId,projectId:pid,...data,notes:[],baselineStart:null,baselineEnd:null};
-      normalizeProgressStatus(created);
-      stampActualDates(created,null,_today);
-      recomputeDuration(created);
-      ts.push(created);
+      const normalized=this._normalizeAndValidate(created,null,_today);
+      if(!normalized.ok)return normalized;
+      ts.push(normalized.task);
     }
-    if(_hasDependencyCycle(ts))return this._fail(this.ERR.CYCLE_DETECTED,'Invalid dependency: cycle detected');
-    Store.saveProjectTasks(pid,ts);
-    Scheduler.cascadeTaskSheet(pid);
-    return this._ok({isEdit});
+    const persistRs=this._persistTaskList(pid,ts,{cascade:true,extra:{isEdit}});
+    return persistRs;
   },
   cycleTaskStatus(pid,taskId){
-    const ts=[...(_realTasks[pid]||[])];
+    const ts=this._getTasks(pid);
     const t=ts.find(x=>x.id===taskId);if(!t)return this._fail(this.ERR.TASK_NOT_FOUND,'Task not found');
     const cyc=['not-started','in-progress','completed'];
     const cur=cyc.includes(t.status)?t.status:'not-started';
@@ -7607,7 +7625,7 @@ const TaskService={
     return this._ok({newTaskId:nId});
   },
   deleteTask(pid,taskId){
-    const ts=[...(_realTasks[pid]||[])].filter(t=>t.id!==taskId);
+    const ts=this._getTasks(pid).filter(t=>t.id!==taskId);
     Store.saveProjectTasks(pid,ts);
     return this._ok();
   },
@@ -8133,9 +8151,8 @@ function _blData(pid){
 }
 // Phase 1 fix: _blSave now persists to localStorage immediately
 function _blSave(pid,data){
-  _blStore[pid]=data;
-  try{localStorage.setItem('_cky_bl',JSON.stringify(_blStore));}catch(e){}
-  _scheduleSave();
+  const all={...Store.getBaselinesMap(),[pid]:data};
+  Store.saveBaselinesMap(all);
 }
 
 // ── Unique ID helper
