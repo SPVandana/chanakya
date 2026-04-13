@@ -6094,6 +6094,14 @@ function _reconcileStoredTaskCacheIntoFresh(){
     // Stored has same/more tasks but weak ID overlap — fresh data likely changed, keep fresh.
   });
 }
+function _restorePlannerStoreFromCache(){
+  try{
+    const _storedPT=JSON.parse(localStorage.getItem('_cky_planner')||'{}');
+    Object.assign(_PT,_storedPT);
+  }catch(e){console.warn('[CKY] planner load failed:',e.message);}
+  // Apply any planner data fetched from server before _PT was declared
+  if(_C._pendingPlanner){Object.assign(_PT,_C._pendingPlanner);delete _C._pendingPlanner;}
+}
 async function boot(){
   const loadEl=$('appLoading');
   if(loadEl)loadEl.style.display='flex';
@@ -6106,13 +6114,7 @@ async function boot(){
   // Always seed sample data if projects are missing
   initSamples(); // always re-init to ensure fresh CSV data
   loadRealSchedule(); // always reload real schedule data (in-memory)
-  // Phase 1 fix: restore planner state from localStorage (applied after _PT is declared at line ~8170)
-  try{
-    const _storedPT=JSON.parse(localStorage.getItem('_cky_planner')||'{}');
-    Object.assign(_PT,_storedPT);
-  }catch(e){console.warn('[CKY] planner load failed:',e.message);}
-  // Apply any planner data fetched from server before _PT was declared
-  if(_C._pendingPlanner){Object.assign(_PT,_C._pendingPlanner);delete _C._pendingPlanner;}
+  _restorePlannerStoreFromCache();
   // Restore user-edited tasks from localStorage — smart merge to fix stale 50-task bug:
   // if stored task count < fresh task count, merge edits into fresh list instead of replacing
   // Phase 1 fix: removed special-case deletion of VM001/VM002 localStorage data.
@@ -6980,6 +6982,20 @@ function _renderNotesList(containerId,notes){
   el.innerHTML=arr.map(n=>`<div class="note-item"><div class="note-meta">${_esc(n.author||'Team')}${n.dt?' · '+fmtDt(n.dt):''}</div><div class="note-text">${_esc(n.text)}</div></div>`).join('');
   el.scrollTop=el.scrollHeight;
 }
+function _taskById(pid,taskId){
+  return Store.getTasksByProject(pid).find(t=>t.id===taskId);
+}
+function _renderTaskNotes(containerId,pid,taskId){
+  _renderNotesList(containerId,_taskById(pid,taskId)?.notes);
+}
+function _addNoteFromInput(pid,taskId,inputId,containerId,author){
+  const inp=$(inputId);const txt=inp?.value||'';
+  if(!txt.trim())return false;
+  _addNote(pid,taskId,txt,author||'Team');
+  if(inp)inp.value='';
+  _renderTaskNotes(containerId,pid,taskId);
+  return true;
+}
 // Append a note to a task — persists immediately.
 // Syncs to Store task data and _PT (Planner store) if present.
 function _addNote(pid,taskId,text,author){
@@ -7001,32 +7017,19 @@ function _addNote(pid,taskId,text,author){
 // Add note from Task Side Panel
 function addNoteFromTP(){
   if(!S.task||!S.proj)return;
-  const inp=$('tpNoteInput');const txt=inp?.value||'';if(!txt.trim())return;
-  _addNote(S.proj.id,S.task.id,txt,'Team');
-  if(inp)inp.value='';
-  // Re-render notes list
-  const updated=Store.getTasksByProject(S.proj.id).find(t=>t.id===S.task.id);
-  _renderNotesList('tpNotesList',updated?.notes);
+  _addNoteFromInput(S.proj.id,S.task.id,'tpNoteInput','tpNotesList','Team');
 }
 // Add note from Task Edit Modal (saves immediately, independent of Save Task)
 function addNoteFromModal(){
   const eid=$('tmEId')?.value;
   if(!eid||!S.proj)return;
-  const inp=$('tmNoteInput');const txt=inp?.value||'';if(!txt.trim())return;
-  _addNote(S.proj.id,eid,txt,'Team');
-  if(inp)inp.value='';
-  const updated=Store.getTasksByProject(S.proj.id).find(t=>t.id===eid);
-  _renderNotesList('tmNotesList',updated?.notes);
+  _addNoteFromInput(S.proj.id,eid,'tmNoteInput','tmNotesList','Team');
 }
 // Add note from Planner Task Panel
 function addNoteFromPlanTP(){
   const pid=S.proj?.id;const tid=window.planTPTaskId;
   if(!pid||!tid)return;
-  const inp=$('planTPNoteInput');const txt=inp?.value||'';if(!txt.trim())return;
-  _addNote(pid,tid,txt,'Team');
-  if(inp)inp.value='';
-  const updated=Store.getTasksByProject(pid).find(t=>t.id===tid);
-  _renderNotesList('planTPNotesList',updated?.notes);
+  _addNoteFromInput(pid,tid,'planTPNoteInput','planTPNotesList','Team');
 }
 function addPred(){
   if(!S.task||!S.proj)return;
@@ -12016,6 +12019,25 @@ function _selfTest(){
   const _scNoop=Scheduler.cascadeTaskSheet(_scPid);
   assert('Cascade no-op reports changed=false', _scNoop===false, `got ${_scNoop}`);
   Store.saveProjectTasks(_scPid,[]);
+  console.groupEnd();
+
+  // ── BLOCK 4c: Planner/cache helper contracts
+  console.group('4c. Planner/cache helper contracts');
+  const _phPid='__selftest_planner_helpers__';
+  delete _PT[_phPid];
+  assert('_pHas false before init', _pHas(_phPid)===false);
+  const _phInit=_pData(_phPid);
+  assert('_pData initializes array', Array.isArray(_phInit)&&_phInit.length===0);
+  assert('_pHas true after init', _pHas(_phPid)===true);
+  _pReplace(_phPid,[{id:'ph-1'},{id:'ph-2'}]);
+  assert('_pReplace updates planner state', _pData(_phPid).length===2, `got ${_pData(_phPid).length}`);
+  const _shStored=[{id:'A',progress:10},{id:'B',progress:20}];
+  const _shFresh=[{id:'A',progress:0},{id:'B',progress:0},{id:'C',progress:0}];
+  assert('_shouldReplaceFreshWithStoredTasks false for truncated cache', !_shouldReplaceFreshWithStoredTasks(_shStored,_shFresh));
+  const _mh=_mergeStoredTaskEditsIntoFresh([{id:'A',progress:55,status:'in-progress'}],[{id:'A',progress:0,status:'not-started'},{id:'B',progress:0,status:'not-started'}]);
+  assert('_mergeStoredTaskEditsIntoFresh applies stored edits', _mh[0].progress===55 && _mh[0].status==='in-progress');
+  assert('_mergeStoredTaskEditsIntoFresh preserves unmatched fresh tasks', _mh[1].id==='B');
+  delete _PT[_phPid];
   console.groupEnd();
 
   // ── BLOCK 5: Task Data Validation
