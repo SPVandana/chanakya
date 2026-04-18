@@ -5,11 +5,18 @@ node_modules/
 .env
 
 # Data — project data (live DB lives on Render's persistent disk, not in git)
-data/chanakya-data.json          # one-time migration source — keep local only
-data/chanakya.db                 # SQLite DB — never commit, lives on Render disk
+# chanakya-data.json: one-time migration source, keep local only
+data/chanakya-data.json
+# SQLite DB files: live on Render persistent disk, never commit
+data/chanakya.db
 data/chanakya.db-shm
 data/chanakya.db-wal
 data/*.bak
+# macOS filesystem artifacts
+data/.fuse_hidden*
+
+# Backup files
+public/*.backup*
 
 # data/users.json IS committed — Render's seed script needs it on every deploy.
 # It contains bcrypt hashes only (no plain-text passwords), safe to version-control.
