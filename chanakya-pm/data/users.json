@@ -4,55 +4,55 @@
     "email": "admin@chanakya.in",
     "name": "Admin",
     "role": "Administrator",
-    "passwordHash": "$2a$12$hnmm2KP6vefuOfyADkbckOqxRnBLB/e5VDPbDMM/ot.T9w6/vD8PC"
+    "passwordHash": "$2a$12$4y5uV2K.U6XpOTCA9dMzhe5lL.qf2gzHPjPr9f8HHqRRZvKPjzwn6"
   },
   {
     "id": "u2",
     "email": "pavan@whitelotusgroup.in",
     "name": "Pavan",
     "role": "Project Manager",
-    "passwordHash": "$2a$12$lBnkJ9dyl8s3oCoQcme/reNDp4uqpYdkZ4jjiVqs7JvFTNkcnIhTO"
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
     "id": "u3",
     "email": "chetan@whitelotusgroup.in",
     "name": "Chetan",
     "role": "Project Manager",
-    "passwordHash": "$2a$12$VD45fe8eA3YWNRmNad61f.9Fw3pYWWBps0lxvYwPML7FdI1EBTPIy"
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
     "id": "u4",
     "email": "praveer.c@whitelotusgroup.in",
     "name": "Praveer C",
     "role": "Project Manager",
-    "passwordHash": "$2a$12$Urg4XaLtwORdWoIYIckwf.Z2mewLv51vUFRy6HM95z4fBbIs5O/0."
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
     "id": "u5",
     "email": "shraddha.b@whitelotusgroup.in",
     "name": "Shraddha B",
     "role": "Project Manager",
-    "passwordHash": "$2a$12$8.LY38pD0ED7tItRb8eLbeOho./x5ZO6zZT8WbC74mCBcKKfYLcSG"
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
     "id": "u6",
     "email": "stanly.john@whitelotusgroup.in",
     "name": "Stanly John",
     "role": "Project Manager",
-    "passwordHash": "$2a$12$8RQSGfMCgSGLShc3rqXM8..EkcUH6wu.m5VhhPFcZRZeaOQM6.0z6"
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
     "id": "u7",
     "email": "vandana.p@whitelotusgroup.in",
     "name": "Vandana P",
     "role": "Project Manager",
-    "passwordHash": "$2a$12$oVUAKZOojtcXwz8DGWGIhOG8nJrGTaojqa7GzWcALYqUH0INHgTiq"
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
     "id": "u8",
     "email": "productanalyst.wl@gmail.com",
     "name": "Product Analyst",
     "role": "Analyst",
-    "passwordHash": "$2a$12$zCUsvF1l90y1J.UlhwON/u9ZQ4yqtTmv3xNqjXQr0.ZNdyNE1wPtC"
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   }
 ]

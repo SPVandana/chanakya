@@ -50,6 +50,15 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api',      dataRoutes);   // /api/data, /api/backup, /api/export
 
+// ─── Runtime config (Google Client ID, etc.) ─────────────────────────────────
+// Serves /config.js so the frontend can read GOOGLE_CLIENT_ID without it being
+// hardcoded in the HTML. Safe to expose — it's a public OAuth client ID.
+app.get('/config.js', (_req, res) => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+  res.type('application/javascript');
+  res.send(`window.CKY_CONFIG = ${JSON.stringify({ googleClientId })};`);
+});
+
 // ─── Static frontend (public/) ────────────────────────────────────────────────
 // Serves public/index.html and any other assets in public/.
 // Because the HTML is served from the same origin as the API,
