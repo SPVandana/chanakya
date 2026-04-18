@@ -1,0 +1,69 @@
+/**
+ * server.js — Chanakya PM Express server
+ *
+ * To run:
+ *   npm start          — production
+ *   npm run dev        — development with auto-restart (nodemon)
+ *
+ * First-time setup:
+ *   npm install
+ *   npm run seed       — migrate users.json → SQLite
+ *   npm run migrate    — migrate chanakya-data.json → SQLite
+ *   npm start
+ */
+
+require('dotenv').config();
+
+// Initialise DB early — creates data/chanakya.db and schema on first run
+require('./db/db');
+
+const express = require('express');
+const cors    = require('cors');
+const path    = require('path');
+
+const authRoutes = require('./routes/auth');
+const dataRoutes = require('./routes/data');
+
+const app  = express();
+const PORT = process.env.PORT || 3000;
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '10mb' }));
+
+// CORS — only needed if frontend and API are on different origins.
+// In production (same-origin serving via public/), this is a no-op.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins.length ? allowedOrigins : true,
+  credentials: true,
+}));
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+// The HTML pings GET /health to decide server-mode vs. local-mode.
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
+});
+
+// ─── API routes ───────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
+app.use('/api',      dataRoutes);   // /api/data, /api/backup, /api/export
+
+// ─── Static frontend (public/) ────────────────────────────────────────────────
+// Serves public/index.html and any other assets in public/.
+// Because the HTML is served from the same origin as the API,
+// CKY_API = window.location.origin and all fetch() calls resolve automatically.
+app.use(express.static(path.join(__dirname, 'public')));
+
+// SPA fallback — any unmatched route returns index.html
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`\n  ✦ Chanakya PM  →  http://localhost:${PORT}`);
+  console.log(`  ✦ Database      →  data/chanakya.db (SQLite + WAL)`);
+  console.log(`  ✦ Environment   →  ${process.env.NODE_ENV || 'development'}\n`);
+});

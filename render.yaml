@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: chanakya-pm
+    runtime: node
+    rootDir: chanakya-pm            # Express app lives in the chanakya-pm/ subdirectory
+    buildCommand: npm install && npm run seed
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true        # Render auto-generates a secure random value
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: DATA_DIR
+        value: /data               # Points to the persistent disk mount below
+      - key: GOOGLE_CLIENT_ID
+        value: ""                  # Set in Render dashboard if you add Google login later
+      - key: ALLOWED_ORIGINS
+        value: ""                  # Leave blank — frontend and API share the same origin
+    disk:
+      name: chanakya-data
+      mountPath: /data             # Persistent disk — SQLite DB survives every redeploy
+      sizeGB: 1                    # ~$0.25/month; more than enough for SQLite
