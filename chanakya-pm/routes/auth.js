@@ -77,7 +77,7 @@ router.post('/google', async (req, res) => {
   }
 
   // Confirm the token was issued for our app
-  const expectedClientId = process.env.GOOGLE_CLIENT_ID || '638036945919-8bo3l6t8mlv3vn4pnkliov8bilp5uj4d.apps.googleusercontent.com';
+  const expectedClientId = process.env.GOOGLE_CLIENT_ID || '638036945919-lvvqs9lovnq9vfcponoiqud4lvn3dtbm.apps.googleusercontent.com';
   if (googleInfo.issued_to !== expectedClientId) {
     console.warn('[auth/google] token issued_to mismatch:', googleInfo.issued_to);
     return res.status(401).json({ error: 'Google token was not issued for this application' });
