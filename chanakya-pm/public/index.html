@@ -645,6 +645,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <button class="htab" id="htab-det" style="display:none" onclick="showMain('det')"><span id="htab-nm">Project</span></button>
   </div>
   <div class="hdr-actions">
+    <span id="savedAt" style="font-size:10px;color:var(--text-muted);white-space:nowrap;display:none"></span>
     <button class="btn btn-ghost btn-sm" id="approvalsBtn" onclick="toggleApprovalsPanel()" title="Approval Requests" style="position:relative;padding-right:10px">
       ✅ Approvals<span id="approvalsBadge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;font-weight:700;line-height:17px;text-align:center;padding:0 4px">0</span>
     </button>
@@ -1258,6 +1259,11 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         <div class="fg"><label class="fl">Priority</label><select class="fss" id="tm-priority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
         <div class="fg"><label class="fl">Progress (%)</label><input type="number" class="fii" id="tm-progress" min="0" max="100" value="0" placeholder="0–100" oninput="syncProgressToStatus()"></div>
       </div>
+      <!-- Block / delay reason row — shown when status = blocked or on-hold -->
+      <div class="fr2" id="tm-reason-row" style="display:none">
+        <div class="fg"><label class="fl">Reason</label><select class="fss" id="tm-block-reason"><option value="">Select reason…</option><option value="rain">Rain / Weather Hold</option><option value="material">Missing Material</option><option value="labour">Labour Issue</option><option value="design">Design / Drawing Issue</option><option value="inspection">Inspection Hold</option><option value="approval">Approval Pending</option><option value="other">Other</option></select></div>
+        <div class="fg"><label class="fl">Details <span style="font-size:9px;color:var(--text-muted);font-weight:400">(optional)</span></label><input class="fii" id="tm-block-details" placeholder="Brief description…"></div>
+      </div>
       <div class="fr3">
         <div class="fg"><label class="fl" id="tm-start-lbl">Start Date</label><input type="date" class="fii" id="tm-start" onchange="tmUpdateDur()"></div>
         <div class="fg"><label class="fl" id="tm-end-lbl">Finish Date</label><input type="date" class="fii" id="tm-end" onchange="tmUpdateDur()"></div>
@@ -1269,7 +1275,15 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       </div>
       <div class="fr3">
         <div class="fg"><label class="fl">Assignee</label><input class="fii" id="tm-assignee" value="Site Team" readonly><datalist id="alist"></datalist></div>
-        <input type="hidden" id="tm-cost" value="0"><!-- Cost hidden: no budget data yet -->
+        <div class="fg" style="display:flex;align-items:center;gap:16px;padding-top:20px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text)">
+            <input type="checkbox" id="tm-ms-check" style="accent-color:var(--accent);width:14px;height:14px"> Milestone ◆
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text)">
+            <input type="checkbox" id="tm-inspection" style="accent-color:var(--accent);width:14px;height:14px"> Inspection Required
+          </label>
+        </div>
+        <input type="hidden" id="tm-cost" value="0">
         <input type="hidden" id="tm-ms" value="0">
       </div>
       <div class="fr2" style="display:none">
@@ -6700,24 +6714,47 @@ function renderTodaysTasks(){
   const statusBadge=function(s){return({'not-started':'b-not-started','in-progress':'b-in-progress','completed':'b-completed','blocked':'b-blocked','on-hold':'b-on-hold'})[s]||'b-not-started';};
 
   body.innerHTML=activeTasks.map(function(t){
-    // Progress display logic:
-    //  - Today: show only if task has started (progress>0 or active status)
-    //  - Past days: always show progress
-    var started=(t.progress>0||t.status==='in-progress'||t.status==='completed'||t.status==='blocked');
-    var showProg=(selDate<todayStr)||started;
-    var progHtml=showProg
-      ?'<div class="tt-task-prog-wrap"><div class="tt-task-prog-bar"><div class="tt-task-prog-fill" style="width:'+t.progress+'%"></div></div><span class="tt-task-prog-pct">'+t.progress+'%</span></div>'
-      :'<span style="font-size:10px;color:var(--text-light)">-</span>';
-    return '<div class="tt-task-row">'
+    var statusOpts=['not-started','in-progress','completed','blocked','on-hold'].map(function(s){
+      return '<option value="'+s+'"'+(s===t.status?' selected':'')+'>'+statusLabel(s)+'</option>';
+    }).join('');
+    return '<div class="tt-task-row" style="grid-template-columns:1fr 90px 110px 120px 140px">'
       +'<div><div class="tt-task-name" title="'+t.name+'">'+t.name+'</div>'
-      +'<div style="font-size:10px;color:var(--text-muted)">'+((t.subphaseName||t.phaseName)||'')+'</div></div>'
-      +'<div><div class="tt-task-villa" title="'+t._villaName+'">'+t._villaCode+'</div></div>'
-      +'<div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(t._contractorName||'')+'">'+( t._contractorName||'<span style="color:var(--text-light)">-</span>')+'</div>'
-      +'<div><span class="badge '+statusBadge(t.status)+'" style="font-size:9px;padding:3px 8px;white-space:nowrap">'+statusLabel(t.status)+'</span></div>'
-      +'<div>'+progHtml+'</div>'
+      +'<div style="font-size:10px;color:var(--text-muted)">'+((t.subphaseName||t.phaseName)||'')+'&nbsp;·&nbsp;'+t._villaCode+'</div></div>'
+      +'<div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(t._contractorName||'')+'">'+( t._contractorName||'-')+'</div>'
+      +'<div><select style="font-size:10px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:100%;cursor:pointer" onchange="ttQuickUpdate(\''+t._projId+'\',\''+t.id+'\',null,this.value)">'+statusOpts+'</select></div>'
+      +'<div style="display:flex;align-items:center;gap:5px">'
+      +'<input type="range" min="0" max="100" value="'+t.progress+'" style="flex:1;accent-color:var(--accent);cursor:pointer" oninput="this.nextElementSibling.textContent=this.value+\'%\'" onchange="ttQuickUpdate(\''+t._projId+'\',\''+t.id+'\',parseInt(this.value),null)">'
+      +'<span style="font-size:10px;font-family:\'DM Mono\',monospace;min-width:30px;color:var(--text-muted)">'+t.progress+'%</span>'
+      +'</div>'
+      +'<div id="tt-saved-'+t.id+'" style="font-size:10px;color:var(--success);display:none">✓ Saved</div>'
       +'</div>';
   }).join('');
 }
+function ttQuickUpdate(projId,taskId,progress,status){
+  if(!projId||!taskId)return;
+  var ts=Store.getTasksByProject(projId);
+  var t=ts.find(function(x){return x.id===taskId;});
+  if(!t)return;
+  var changed=false;
+  if(progress!==null&&progress!==undefined&&Number.isFinite(progress)){
+    t.progress=Math.min(100,Math.max(0,progress));
+    // Sync status from progress (unless blocked/on-hold)
+    if(t.status!=='blocked'&&t.status!=='on-hold'){
+      if(t.progress===100)t.status='completed';
+      else if(t.progress===0)t.status='not-started';
+      else t.status='in-progress';
+    }
+    changed=true;
+  }
+  if(status){t.status=status;if(status==='completed')t.progress=100;else if(status==='not-started')t.progress=0;changed=true;}
+  if(!changed)return;
+  Store.saveProjectTasks(projId,ts);Store.flush();
+  syncProjStatus(projId);renderStats();
+  _showSavedAt();
+  var el=document.getElementById('tt-saved-'+taskId);
+  if(el){el.style.display='';setTimeout(function(){el.style.display='none';},2000);}
+}
+
 // - TASK VIEW TAB SWITCHING -
 window._ttTab = 'daily';
 function ttSwitchTab(tab){
@@ -7546,6 +7583,8 @@ function renderWBS(){
         <td title="${t.id}" style="text-align:center;font-family:'DM Mono',monospace;font-size:10px">${t.id.split('-').pop()}</td>
         <td><div class="tlbl" style="padding-left:22px">
           <span style="color:${scl[t.status]||'#ccc'};font-size:10px;flex-shrink:0">${si[t.status]||'○'}</span>
+          ${t.milestone?`<span style="color:var(--accent);font-size:10px;flex-shrink:0" title="Milestone">◆</span>`:''}
+          ${t.inspectionRequired?`<span style="font-size:10px;flex-shrink:0" title="Inspection Required">🔍</span>`:''}
           <span>${tName}</span>
         </div></td>
         <td style="text-align:center"><span class="badge ${sbl(t.status)}" style="cursor:pointer" onclick="event.stopPropagation();cycSt('${t.id}')" title="Click to cycle">${slt(t.status)}</span></td>
@@ -8113,6 +8152,11 @@ function openAddTask(ctx){
   $('tm-status').value='not-started';$('tm-priority').value='medium';
   $('tm-progress').value=0;$('tm-cost').value=0;$('tm-ms').value=0;
   $('tm-constraint').value='asap';
+  if($('tm-ms-check'))$('tm-ms-check').checked=false;
+  if($('tm-inspection'))$('tm-inspection').checked=false;
+  if($('tm-block-reason'))$('tm-block-reason').value='';
+  if($('tm-block-details'))$('tm-block-details').value='';
+  const rr=$('tm-reason-row');if(rr)rr.style.display='none';
   $('tm-start').value='';$('tm-end').value='';
   $('tm-actual-start').value='';$('tm-actual-end').value='';
   _tmSetMode('add');
@@ -8132,6 +8176,16 @@ function openEditTask(id){
   $('tm-name').value=t.name;$('tm-status').value=t.status;$('tm-priority').value=t.priority;
   $('tm-progress').value=t.progress||0;$('tm-assignee').value='Site Team';
   $('tm-cost').value=t.cost||0;$('tm-ms').value=t.milestone||0;$('tm-constraint').value=t.constraint||'asap';
+  // Milestone + inspection checkboxes
+  if($('tm-ms-check'))$('tm-ms-check').checked=!!(t.milestone);
+  if($('tm-inspection'))$('tm-inspection').checked=!!(t.inspectionRequired);
+  // Block/delay reason
+  if($('tm-block-reason'))$('tm-block-reason').value=t.blockReason||'';
+  if($('tm-block-details'))$('tm-block-details').value=t.blockDetails||'';
+  const rr=$('tm-reason-row');
+  if(rr)rr.style.display=(t.status==='blocked'||t.status==='on-hold')?'':'none';
+  // Enforce bidirectional sync on load
+  syncStatusToProgress();
   // In edit mode: Start/End fields = Actual Start/End.
   // Populate with stored actual dates, falling back to planned dates for older tasks.
   $('tm-start').value=t.actualStartDate||t.startDate||'';
@@ -8194,6 +8248,9 @@ function syncStatusToProgress(){
   if(st==='completed') inp.value=100;
   else if(st==='not-started') inp.value=0;
   // in-progress / blocked / on-hold: keep whatever the user entered
+  // Show/hide block reason row
+  const rr=$('tm-reason-row');
+  if(rr) rr.style.display=(st==='blocked'||st==='on-hold')?'':'none';
 }
 function syncProgressToStatus(){
   const inp=$('tm-progress');if(!inp)return;
@@ -8519,6 +8576,8 @@ const TaskService={
     const data={phaseId:_phId,phaseName:_phName,subphaseId:_spId,subphaseName:_spName,
       name:form.name,status:form.status,priority:form.priority,progress:_autoProg,
       assignee:'Site Team',cost:Number(form.cost)||0,milestone:Number(form.milestone),
+      inspectionRequired:Number(form.inspectionRequired)||0,
+      blockReason:form.blockReason||'',blockDetails:form.blockDetails||'',
       constraint:form.constraint||existT?.constraint||'asap',duration:existT?.duration||1,
       startDate:_startDate,endDate:_endDate,predecessors:preds,
       actualStartDate:_actualStartDate,actualEndDate:_actualEndDate};
@@ -8759,7 +8818,10 @@ function saveTask(){
     priority:$('tm-priority').value,
     assignee:'Site Team',
     cost:$('tm-cost').value,
-    milestone:$('tm-ms').value,
+    milestone:($('tm-ms-check')?.checked?1:0),
+    inspectionRequired:($('tm-inspection')?.checked?1:0),
+    blockReason:$('tm-block-reason')?.value||'',
+    blockDetails:$('tm-block-details')?.value||'',
     constraint:$('tm-constraint').value,
     subphaseName:$('tm-subphase-name')?.value||'',
   };
@@ -8775,6 +8837,15 @@ function saveTask(){
     }
   }catch(e){console.warn('[CKY] _recalcGroupDates in saveTask failed:',e);}
   syncProjStatus(S.proj.id);closeMod('taskMod');renderWBS();renderDetStats();_refreshViews();toast(rs.isEdit?'Task updated':'Task added','success');
+  _showSavedAt();
+}
+function _showSavedAt(){
+  const el=$('savedAt');if(!el)return;
+  const now=new Date();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  el.textContent='Saved '+hh+':'+mm;
+  el.style.display='';
 }
 
 // ============================================================
