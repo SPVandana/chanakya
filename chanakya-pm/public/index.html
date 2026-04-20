@@ -646,7 +646,14 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       ✅ Approvals<span id="approvalsBadge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;font-weight:700;line-height:17px;text-align:center;padding:0 4px">0</span>
     </button>
     <button class="btn btn-ghost btn-sm" onclick="openDevMgmt()">⚙ Manage</button>
-    <button class="btn btn-ghost btn-sm" onclick="exportAll()"><span id="connDot" style="width:8px;height:8px;border-radius:50%;background:#b87333;display:inline-block;margin-right:5px;vertical-align:middle" title="Connecting..."></span>Export</button>
+    <div style="position:relative;display:inline-block" id="exportDropWrap">
+      <button class="btn btn-ghost btn-sm" onclick="toggleExportDrop(event)"><span id="connDot" style="width:8px;height:8px;border-radius:50%;background:#b87333;display:inline-block;margin-right:5px;vertical-align:middle" title="Connecting..."></span>Export ▾</button>
+      <div id="exportDrop" style="display:none;position:absolute;right:0;top:100%;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow-md);min-width:170px;padding:4px 0">
+        <button class="btn btn-ghost btn-sm" style="width:100%;text-align:left;border-radius:0;padding:7px 14px" onclick="exportAll();closeExportDrop()">📦 Full Backup (JSON)</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;text-align:left;border-radius:0;padding:7px 14px" onclick="exportDailyCSV();closeExportDrop()">📅 Daily Report (CSV)</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;text-align:left;border-radius:0;padding:7px 14px" onclick="exportWeeklyCSV();closeExportDrop()">📆 Weekly Report (CSV)</button>
+      </div>
+    </div>
     <button class="btn btn-ghost btn-sm" onclick="importAll()">Import</button>
     <button class="btn btn-primary btn-sm" onclick="openAddProj()">+ New Villa</button>
   </div>
@@ -8167,6 +8174,8 @@ function tmUpdateDur(){
 // ============================================================
 function _tmValidate(){
   // Validates at save time only - does not affect save button state.
+  const st=$('tm-status').value;
+  if(st==='on-hold'||st==='blocked') return {ok:true,msg:''};
   const sd=$('tm-start').value;const ed=$('tm-end').value;
   if(sd&&ed&&ed<sd) return {ok:false,msg:'End date cannot be before start date'};
   return {ok:true,msg:''};
@@ -8184,10 +8193,12 @@ function syncStatusToProgress(){
   // in-progress / blocked / on-hold: keep whatever the user entered
 }
 function syncProgressToStatus(){
-  // Progress input → auto-derive status. Works for any status including Not Started.
   const inp=$('tm-progress');if(!inp)return;
   const pct=Math.min(100,Math.max(0,parseInt(inp.value)||0));
   inp.value=pct;
+  const cur=$('tm-status').value;
+  // Never auto-override explicit manual statuses
+  if(cur==='on-hold'||cur==='blocked')return;
   if(pct===100) $('tm-status').value='completed';
   else if(pct===0) $('tm-status').value='not-started';
   else $('tm-status').value='in-progress';
@@ -8235,9 +8246,11 @@ function _validateTaskData(task){
   // Required
   if(!task.name||!String(task.name).trim())errors.push('Task name is required');
 
-  // Date coherence - only checked when both dates are present
-  if(task.startDate&&task.endDate&&task.endDate<task.startDate)
-    errors.push(`End date (${task.endDate}) is before start date (${task.startDate})`);
+  // Date coherence - skipped for on-hold/blocked (dates can be anything)
+  if(task.status!=='on-hold'&&task.status!=='blocked'){
+    if(task.startDate&&task.endDate&&task.endDate<task.startDate)
+      errors.push(`End date (${task.endDate}) is before start date (${task.startDate})`);
+  }
 
   // Duration must be a non-negative number when provided
   if(task.duration!==undefined&&task.duration!==null){
@@ -8251,10 +8264,7 @@ function _validateTaskData(task){
     if(isNaN(p)||p<0||p>100)errors.push('Progress must be between 0 and 100');
   }
 
-  // Status / progress consistency - only hard-block obvious contradictions.
-  // Progress can be set freely; status auto-derives from progress in the UI.
-  const st=task.status;const prog=Number(task.progress||0);
-  if(st==='completed'&&prog<100)errors.push('Completed tasks must have 100% progress');
+  // Status / progress consistency — no hard block; normalizeProgressStatus handles this.
 
   // Predecessors - no self-reference, IDs must be strings
   if(Array.isArray(task.predecessors)){
@@ -8278,6 +8288,11 @@ function normalizeProgressStatus(task){
   if(!task)return task;
   const p=Math.min(100,Math.max(0,parseInt(task.progress)||0));
   task.progress=p;
+  const st=task.status;
+  // on-hold and blocked are explicit user choices — never overwrite with a progress-derived status
+  if(st==='on-hold'||st==='blocked')return task;
+  // completed: ensure progress is 100
+  if(st==='completed'){task.progress=100;return task;}
   task.status=deriveStatusFromProgress(p);
   return task;
 }
@@ -8477,19 +8492,24 @@ const TaskService={
     const ed=form.endDate||'';
     const _autoProg=Math.min(100,parseInt(form.progress)||0);
     const _today=_todayISO();
+    const _skipDateChecks=form.status==='on-hold'||form.status==='blocked';
     let _startDate,_endDate,_actualStartDate,_actualEndDate;
     if(isEdit){
       _startDate=existT?.startDate||'';
       _endDate=existT?.endDate||'';
       _actualStartDate=sd;_actualEndDate=ed;
-      if(_actualStartDate&&_actualStartDate>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual Start cannot be a future date');
-      if(_actualEndDate&&_actualEndDate>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual End cannot be a future date');
+      if(!_skipDateChecks){
+        if(_actualStartDate&&_actualStartDate>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual Start cannot be a future date');
+        if(_actualEndDate&&_actualEndDate>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual End cannot be a future date');
+      }
     }else{
       _startDate=sd;_endDate=ed;
       const _uiActStart=(form.actualStartDate||'').trim();
       const _uiActEnd=(form.actualEndDate||'').trim();
-      if(_uiActStart&&_uiActStart>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual Start cannot be a future date');
-      if(_uiActEnd&&_uiActEnd>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual End cannot be a future date');
+      if(!_skipDateChecks){
+        if(_uiActStart&&_uiActStart>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual Start cannot be a future date');
+        if(_uiActEnd&&_uiActEnd>_today)return this._fail(this.ERR.DATE_IN_FUTURE,'Actual End cannot be a future date');
+      }
       _actualStartDate=_uiActStart||'';
       _actualEndDate=_uiActEnd||'';
     }
@@ -11481,6 +11501,8 @@ const GS = {
 // ── TYPE TOGGLE ──────────────────────────────────────────────
 function gsTypeChanged(val){
   GS.type = val || (document.querySelector('input[name="gs-type-radio"]:checked')||{}).value || 'villas';
+  const hint=$('gs-task-hint');
+  if(hint) hint.style.display=GS.type==='tasks'?'':'none';
   // Clear mapper on type change; rows already loaded, just re-render mapper
   if(GS.rows.length){
     if(GS.type==='villas') _gsRenderVillaMapper();
@@ -12302,6 +12324,55 @@ function exportAll(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wlg-export.json';a.click();
 }
 function importAll(){ openMod('importMod'); renderImportMod(); }
+
+function toggleExportDrop(e){
+  e.stopPropagation();
+  const d=$('exportDrop');
+  if(!d)return;
+  const open=d.style.display==='block';
+  d.style.display=open?'none':'block';
+  if(!open){
+    const close=function(ev){if(!$('exportDropWrap').contains(ev.target)){closeExportDrop();document.removeEventListener('click',close);}};
+    document.addEventListener('click',close);
+  }
+}
+function closeExportDrop(){const d=$('exportDrop');if(d)d.style.display='none';}
+
+function _exportRangeCSV(fromDate,toDate,label){
+  const fmt2=function(d){if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+  const projs=Store.getProjects();
+  const tasksAll=Store.getAllTasks();
+  const rows=[['Task Name','Phase','Sub-Phase','Villa Code','Villa Name','Status','Progress','Planned Start','Planned Finish','Assignee']];
+  Object.values(projs).forEach(function(p){
+    if(p.type==='phase-summary')return;
+    const ts=tasksAll[p.id]||[];
+    ts.forEach(function(t){
+      if(!t.startDate||!t.endDate)return;
+      if(fromDate===toDate){if(t.startDate>fromDate||t.endDate<fromDate)return;}
+      else{if(t.startDate>toDate||t.endDate<fromDate)return;}
+      const vc=(p.code&&p.code.includes('-'))?p.code.split('-').slice(1).join('-'):(p.code||p.id);
+      rows.push([t.name||'',t.phaseName||'',t.subphaseName||'',vc,p.name,t.status||'',(t.progress||0)+'%',fmt2(t.startDate),fmt2(t.endDate),t.assignee||'']);
+    });
+  });
+  const csv=rows.map(function(r){return r.map(function(v){return '"'+(String(v).replace(/"/g,'""'))+'"';}).join(',');}).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='Chanakya-'+label+'-'+fromDate+(fromDate!==toDate?'-to-'+toDate:'')+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
+  toast(label+' exported','success');
+}
+function exportDailyCSV(){
+  const today=_todayISO();
+  _exportRangeCSV(today,today,'Daily-Report');
+}
+function exportWeeklyCSV(){
+  const today=new Date();
+  const day=today.getDay();
+  const mon=new Date(today);mon.setDate(today.getDate()-(day===0?6:day-1));
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  const iso=function(d){return d.toISOString().slice(0,10);};
+  _exportRangeCSV(iso(mon),iso(sun),'Weekly-Report');
+}
 
 // ============================================================
 //  MS PROJECT CSV IMPORTER
@@ -13408,6 +13479,14 @@ window._validateTaskData=_validateTaskData;
               <input type="radio" name="gs-type-radio" value="tasks" onchange="gsTypeChanged(this.value)" style="accent-color:var(--accent)"> Task Schedule
             </label>
           </div>
+        </div>
+
+        <!-- Template hint (shown when Task Schedule is selected) -->
+        <div id="gs-task-hint" style="display:none;background:var(--accent-pale);border:1px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;font-size:11px;line-height:1.7">
+          <strong style="color:var(--accent)">Step 1 — Get the template</strong><br>
+          Download the Chanakya task template, fill it in with your task data, then upload it below.<br>
+          <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="downloadTaskImportTemplate()">⬇ Download Task Template (CSV)</button>
+          <div style="margin-top:6px;color:var(--text-muted)">Required columns: Task Name · Phase · Sub-Phase · Start Date · Finish Date · Duration · Progress % · Status · Priority · Assignee</div>
         </div>
 
         <!-- Drop zone -->
