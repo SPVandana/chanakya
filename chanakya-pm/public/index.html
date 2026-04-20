@@ -620,10 +620,13 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
     </div>
 
-    <!-- View All -->
-    <div style="text-align:center;margin-top:20px">
+    <!-- View All + Add Development -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px">
       <button onclick="selectDev('ALL')" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8a7a68;font-size:12px;padding:10px 24px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='#c9a84c'" onmouseout="this.style.background='rgba(255,255,255,.05)';this.style.color='#8a7a68'">
         View All Developments
+      </button>
+      <button onclick="devMgmtAddDev()" style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);color:#c9a84c;font-size:12px;padding:10px 24px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:.15s;font-weight:600" onmouseover="this.style.background='rgba(201,168,76,.22)';this.style.borderColor='rgba(201,168,76,.6)'" onmouseout="this.style.background='rgba(201,168,76,.12)';this.style.borderColor='rgba(201,168,76,.35)'">
+        + Add Development
       </button>
     </div>
   </div>
@@ -13446,17 +13449,17 @@ window._validateTaskData=_validateTaskData;
 </script>
   <!-- ═══ IMPORT MODAL ═══ -->
   <div class="modal-ov" id="importMod" style="z-index:700">
-    <div class="modal" style="width:680px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column">
+    <div class="modal" style="width:760px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column">
       <div class="modal-hdr">
         <div style="font-size:14px;font-weight:600">Import Data</div>
         <button class="mclose" onclick="closeMod('importMod')">✕</button>
       </div>
-      <div style="padding:14px 18px 6px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-shrink:0">
+      <div style="padding:10px 14px 8px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0">
         <button id="imp-tab-gsheets" class="btn btn-sm btn-primary" onclick="impSwitchTab('gsheets')">📊 Upload CSV / Excel</button>
-        <button id="imp-tab-wlms"   class="btn btn-sm btn-ghost"   onclick="impSwitchTab('wlms')" style="white-space:nowrap">📋 WL Master Schedule</button>
-        <button id="imp-tab-villas"  class="btn btn-sm btn-ghost"   onclick="impSwitchTab('villas')">Villa Details CSV</button>
-        <button id="imp-tab-tasks"   class="btn btn-sm btn-ghost"   onclick="impSwitchTab('tasks')">Task Schedule CSV</button>
-        <button id="imp-tab-restore" class="btn btn-sm btn-ghost"   onclick="impSwitchTab('restore')">Restore Backup</button>
+        <button id="imp-tab-wlms"   class="btn btn-sm btn-ghost"   onclick="impSwitchTab('wlms')">📋 WL Master Schedule</button>
+        <button id="imp-tab-villas"  class="btn btn-sm btn-ghost"   onclick="impSwitchTab('villas')">🏡 Villa Details</button>
+        <button id="imp-tab-tasks"   class="btn btn-sm btn-ghost"   onclick="impSwitchTab('tasks')">📋 Task Schedule</button>
+        <button id="imp-tab-restore" class="btn btn-sm btn-ghost"   onclick="impSwitchTab('restore')">♻ Restore Backup</button>
       </div>
 
       <!-- CSV / EXCEL UPLOAD PANE -->
