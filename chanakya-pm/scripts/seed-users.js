@@ -42,10 +42,11 @@ async function seed() {
 
     try {
       stmts.upsertUser.run({
-        id           : u.id,
-        email        : u.email,
-        name         : u.name,
-        role         : u.role,
+        id          : u.id,
+        email       : u.email,
+        name        : u.name,
+        role        : u.role,
+        permissions : u.permissions || 'view',
         passwordHash,
       });
       console.log(`  ✓  ${u.email.padEnd(42)} (${u.role})`);

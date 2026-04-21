@@ -38,7 +38,7 @@ function requireAuth(req, res, next) {
 function signToken(user) {
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name, role: user.role },
+    { id: user.id, email: user.email, name: user.name, role: user.role, permissions: user.permissions || 'view' },
     JWT_SECRET,
     { expiresIn }
   );

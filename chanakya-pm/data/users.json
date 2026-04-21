@@ -4,6 +4,7 @@
     "email": "admin@chanakya.in",
     "name": "Admin",
     "role": "Administrator",
+    "permissions": "edit,approve,manage",
     "passwordHash": "$2a$12$4y5uV2K.U6XpOTCA9dMzhe5lL.qf2gzHPjPr9f8HHqRRZvKPjzwn6"
   },
   {
@@ -11,6 +12,7 @@
     "email": "pavan@whitelotusgroup.in",
     "name": "Pavan",
     "role": "Project Manager",
+    "permissions": "approve",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
@@ -18,6 +20,7 @@
     "email": "chetan@whitelotusgroup.in",
     "name": "Chetan",
     "role": "Project Manager",
+    "permissions": "approve",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
@@ -25,6 +28,7 @@
     "email": "praveer.c@whitelotusgroup.in",
     "name": "Praveer C",
     "role": "Project Manager",
+    "permissions": "edit,manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
@@ -32,6 +36,7 @@
     "email": "shraddha.b@whitelotusgroup.in",
     "name": "Shraddha B",
     "role": "Project Manager",
+    "permissions": "edit,manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
@@ -39,6 +44,7 @@
     "email": "stanly.john@whitelotusgroup.in",
     "name": "Stanly John",
     "role": "Project Manager",
+    "permissions": "view",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
@@ -46,6 +52,7 @@
     "email": "vandana.p@whitelotusgroup.in",
     "name": "Vandana P",
     "role": "Project Manager",
+    "permissions": "edit,approve,manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
@@ -53,6 +60,23 @@
     "email": "productanalyst.wl@gmail.com",
     "name": "Product Analyst",
     "role": "Analyst",
+    "permissions": "view",
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
+  },
+  {
+    "id": "u9",
+    "email": "dinesh@whitelotusgroup.in",
+    "name": "Dinesh",
+    "role": "Project Manager",
+    "permissions": "edit,manage",
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
+  },
+  {
+    "id": "u10",
+    "email": "madhavarajan.s@whitelotusgroup.in",
+    "name": "Madhavarajan S",
+    "role": "Project Manager",
+    "permissions": "manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   }
 ]

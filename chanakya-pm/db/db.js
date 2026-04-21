@@ -42,6 +42,7 @@ db.exec(`
     email        TEXT UNIQUE NOT NULL COLLATE NOCASE,
     name         TEXT NOT NULL,
     role         TEXT NOT NULL DEFAULT 'viewer',
+    permissions  TEXT NOT NULL DEFAULT 'view',
     password_hash TEXT,          -- NULL for Google-only accounts
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -63,6 +64,11 @@ db.exec(`
   INSERT OR IGNORE INTO app_data (id) VALUES (1);
 `);
 
+// ─── Migrations (safe to run on every start) ─────────────────────────────────
+// Add permissions column if it doesn't exist yet (existing deployments)
+try { db.exec("ALTER TABLE users ADD COLUMN permissions TEXT NOT NULL DEFAULT 'view'"); }
+catch(_){/* column already exists */}
+
 // ─── Prepared statements ──────────────────────────────────────────────────────
 
 /** Users */
@@ -70,18 +76,19 @@ const stmts = {
   getUserByEmail : db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE'),
   getUserById    : db.prepare('SELECT * FROM users WHERE id = ?'),
   insertUser     : db.prepare(`
-    INSERT INTO users (id, email, name, role, password_hash)
-    VALUES (@id, @email, @name, @role, @passwordHash)
+    INSERT INTO users (id, email, name, role, permissions, password_hash)
+    VALUES (@id, @email, @name, @role, @permissions, @passwordHash)
   `),
   upsertUser     : db.prepare(`
-    INSERT INTO users (id, email, name, role, password_hash)
-    VALUES (@id, @email, @name, @role, @passwordHash)
+    INSERT INTO users (id, email, name, role, permissions, password_hash)
+    VALUES (@id, @email, @name, @role, @permissions, @passwordHash)
     ON CONFLICT(email) DO UPDATE SET
       name          = excluded.name,
       role          = excluded.role,
+      permissions   = excluded.permissions,
       password_hash = COALESCE(excluded.password_hash, users.password_hash)
   `),
-  listUsers      : db.prepare('SELECT id, email, name, role, created_at FROM users ORDER BY name'),
+  listUsers      : db.prepare('SELECT id, email, name, role, permissions, created_at FROM users ORDER BY name'),
 
   /** App data */
   getAppData     : db.prepare('SELECT projs, resources, meta, tasks, baselines, planner FROM app_data WHERE id = 1'),

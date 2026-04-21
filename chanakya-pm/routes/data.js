@@ -30,6 +30,11 @@ router.get('/data', requireAuth, (_req, res) => {
 
 // ─── PUT /api/backup ─────────────────────────────────────────────────────────
 router.put('/backup', requireAuth, (req, res) => {
+  // Only users with edit or manage permission may write data
+  const perms = (req.user.permissions || 'view').split(',');
+  if (!perms.includes('edit') && !perms.includes('manage')) {
+    return res.status(403).json({ error: 'You have view-only access. Contact your administrator to make changes.' });
+  }
   const body = req.body;
 
   if (!body || typeof body !== 'object') {
