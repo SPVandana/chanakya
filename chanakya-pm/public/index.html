@@ -767,7 +767,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
     <!-- SITE PLAN -->
     <div class="view" id="view-plan" style="padding:0;overflow:hidden">
-      <iframe src="villa-master-plan.html"
+      <iframe src="villa-master-plan.html?v=2"
         id="masterPlanFrame"
         style="flex:1;width:100%;border:none;display:block;min-height:0"
         allowfullscreen></iframe>
@@ -6389,7 +6389,7 @@ function _renderSitePlan(){
   if(frame){
     frame.style.display=isAmanvana?'block':'none';
     // Load src lazily on first open
-    if(isAmanvana&&!frame.src.includes('villa-master-plan')) frame.src='villa-master-plan.html';
+    if(isAmanvana&&!frame.src.includes('villa-master-plan')) frame.src='villa-master-plan.html?v=2';
   }
   // Show / hide placeholder for non-Amanvana developments
   if(!placeholder){
@@ -13453,19 +13453,7 @@ function _applyPermissions(){
   // Task side-panel action buttons (Edit, Copy, Status, Delete)
   const tpacts=document.querySelector('.tpacts');
   if(tpacts)tpacts.style.display=CAN.edit?'':'none';
-  // View-only banner
-  let voBanner=$('view-only-banner');
-  if(!CAN.edit&&!CAN.manage){
-    if(!voBanner){
-      voBanner=document.createElement('div');
-      voBanner.id='view-only-banner';
-      voBanner.style.cssText='position:fixed;bottom:0;left:0;right:0;background:var(--surface2);border-top:1px solid var(--border);padding:6px 20px;font-size:11px;color:var(--text-muted);z-index:500;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px';
-      voBanner.innerHTML='👁 View-only access — contact your administrator to make changes';
-      document.body.appendChild(voBanner);
-    }
-  } else {
-    if(voBanner)voBanner.remove();
-  }
+  // View-only banner removed
 }
 
 async function doLogin(){
@@ -13712,8 +13700,7 @@ function doLogout(){
   _clearToken();
   _currentUser=null; _currentDev=null; _origDevFilter=null;
   window.CAN.edit=false; window.CAN.approve=false; window.CAN.manage=false;
-  const voBanner=$('view-only-banner'); if(voBanner)voBanner.remove();
-  $('screen-select').style.display='none';
+    $('screen-select').style.display='none';
   $('app-header').style.display='none';
   $('app-body').style.display='none';
   $('li-email').value=''; $('li-pass').value=''; $('li-err').style.display='none';

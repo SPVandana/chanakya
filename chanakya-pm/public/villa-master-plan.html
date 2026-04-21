@@ -6,136 +6,167 @@
 <title>White Lotus – Master Plan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --wl-ferrous:#965532; --wl-sandstone:#FAE1C8; --wl-charcoal:#161926;
-  --wl-cement:#A0A09B;  --wl-white:#FFFEF8;     --wl-ivory:#FFFAF0;
-  --wl-green:#73823C;   --wl-gold:#CA9F49;       --wl-gold-d:#A9762A;
-  --z1:#965532; --z2:#73823C; --z3:#CA9F49;
+  /* ── Chanakya design tokens (matches dashboard exactly) ── */
+  --ck-bg:#f7f5f0;
+  --ck-surface:#fff;
+  --ck-surface2:#f0ede6;
+  --ck-surface3:#e8e4db;
+  --ck-border:#e2ddd4;
+  --ck-border-dark:#c8c0b0;
+  --ck-text:#1a1714;
+  --ck-text-muted:#7a7267;
+  --ck-text-light:#b0a898;
+  --ck-accent:#8b6f47;
+  --ck-accent-light:#c4a882;
+  --ck-accent-pale:#f3ede3;
+  --ck-gold:#c9a84c;
+  --ck-green:#3a6b47;
+  /* ── Map / SVG fill tokens — keep intact ── */
+  --wl-ferrous:#965532; --wl-sandstone:#FAE1C8;
+  --wl-cement:#A0A09B;  --wl-white:#FFFEF8;
+  --wl-green:#73823C;   --wl-gold:#c9a84c;   --wl-gold-d:#A9762A;
+  --z1:#965532; --z2:#73823C; --z3:#c9a84c;
   --sold-fill:rgba(150,85,50,0.48); --sold-stroke:#965532;
   --avail-fill:rgba(250,225,200,0.42); --avail-stroke:#A0A09B;
   --font-d:'DM Serif Display',Georgia,serif;
-  --font-b:'Open Sans',Arial,sans-serif;
+  --font-b:'DM Sans','Open Sans',Arial,sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--wl-charcoal);
-  font-family:var(--font-b);color:var(--wl-white);-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--ck-bg);
+  font-family:var(--font-b);color:var(--ck-text);-webkit-font-smoothing:antialiased}
 
-/* ── Header ── */
-.hdr{min-height:52px;background:#0d1118;border-bottom:1px solid rgba(202,159,73,0.18);
-  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
-  padding:0 20px;gap:12px;flex-shrink:0;z-index:20}
-/* Logo mark — left column */
-.hdr-brand{display:flex;align-items:center;gap:9px;text-decoration:none}
-.hdr-logo-w{font-family:var(--font-d);font-size:24px;line-height:1;color:var(--wl-gold);
-  letter-spacing:-.02em;flex-shrink:0}
-.hdr-logo-text{display:flex;flex-direction:column;gap:1px}
-.hdr-logo-name{font-family:var(--font-b);font-size:9.5px;font-weight:500;
-  letter-spacing:.28em;color:var(--wl-white);text-transform:uppercase}
-.hdr-logo-tagline{font-family:var(--font-b);font-size:7px;font-weight:300;
-  letter-spacing:.18em;color:rgba(202,159,73,.6);text-transform:uppercase}
-/* Center title */
-.hdr-center{text-align:center}
-.hdr-title{font-family:var(--font-d);font-size:14px;letter-spacing:.06em;color:var(--wl-sandstone)}
-.hdr-sub{font-size:9px;font-weight:300;letter-spacing:.14em;text-transform:uppercase;color:var(--wl-cement);margin-top:2px}
-/* Right — chips + sync badge */
-.hdr-right{display:flex;align-items:center;gap:8px;justify-content:flex-end}
-.hdr-chips{display:flex;gap:6px}
-.chip{font-size:10px;padding:3px 9px;border:1px solid rgba(160,160,155,.2);border-radius:2px;
-  color:var(--wl-cement);letter-spacing:.04em;white-space:nowrap}
-.chip strong{color:var(--wl-gold)}
+/* ── No header — stats live in sidebar top ── */
+.hdr{display:none}
 
-/* ── Layout ── */
-.layout{display:flex;height:calc(100vh - 52px)}
+/* ── Layout fills full viewport height ── */
+.layout{display:flex;height:100vh}
 
-/* ── Sidebar ── */
-.sb{width:272px;min-width:272px;background:#0a0d14;border-right:1px solid rgba(160,160,155,.1);
+/* ── Sidebar — Chanakya warm light style ── */
+.sb{width:272px;min-width:272px;background:var(--ck-surface);
+  border-right:1px solid var(--ck-border);
   display:flex;flex-direction:column;overflow:hidden}
-.sb-scroll{flex:1;overflow-y:auto;padding:14px 12px}
+.sb-scroll{flex:1;overflow-y:auto;padding:0 12px 16px}
 .sb-scroll::-webkit-scrollbar{width:3px}
-.sb-scroll::-webkit-scrollbar-thumb{background:rgba(160,160,155,.25);border-radius:2px}
+.sb-scroll::-webkit-scrollbar-thumb{background:var(--ck-border-dark);border-radius:2px}
 
-.sb-label{font-size:8.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
-  color:rgba(160,160,155,.5);padding:12px 4px 6px;border-bottom:1px solid rgba(160,160,155,.08);
+/* Stats panel — top of sidebar, no header needed */
+.sb-top{padding:14px 14px 12px;border-bottom:1px solid var(--ck-border);background:var(--ck-bg)}
+.sb-top-title{font-family:var(--font-d);font-size:15px;color:var(--ck-text);
+  margin-bottom:10px;letter-spacing:.01em}
+.sb-stats-row{display:flex;gap:0;border:1px solid var(--ck-border);border-radius:7px;
+  overflow:hidden;margin-bottom:8px}
+.sb-stat{flex:1;padding:8px 6px;text-align:center;background:var(--ck-surface);
+  border-right:1px solid var(--ck-border)}
+.sb-stat:last-child{border-right:none}
+.sb-stat-val{font-family:var(--font-d);font-size:19px;line-height:1}
+.sb-stat-val.sold{color:var(--ck-accent)}
+.sb-stat-val.avail{color:var(--ck-green)}
+.sb-stat-val.total{color:var(--ck-text)}
+.sb-stat-lbl{font-size:8.5px;color:var(--ck-text-muted);letter-spacing:.07em;
+  text-transform:uppercase;margin-top:2px}
+.sb-zone-status{font-size:10px;color:var(--ck-text-muted);letter-spacing:.04em;
+  opacity:0;transition:opacity .3s;min-height:14px;line-height:1.4}
+.sb-sync{font-size:9px;color:var(--ck-text-light);margin-top:4px;letter-spacing:.04em}
+
+.sb-label{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ck-text-muted);padding:14px 4px 6px;border-bottom:1px solid var(--ck-border);
   margin-bottom:8px}
 
-/* Zone cards */
-.zone-card{border:1px solid rgba(160,160,155,.12);border-radius:3px;padding:11px 13px;
-  cursor:pointer;transition:all .22s;background:rgba(255,254,248,.02);position:relative;
-  overflow:hidden;margin-bottom:6px}
-.zone-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+/* ── Modal progress — Chanakya style ── */
+.modal-prog-wrap{display:flex;align-items:center;gap:14px}
+.modal-prog-val{font-family:var(--font-d);font-size:30px;color:var(--ck-accent);line-height:1;flex-shrink:0}
+.modal-prog-right{flex:1}
+.modal-prog-bar{height:6px;background:var(--ck-border);border-radius:4px;overflow:hidden;margin:6px 0 4px}
+.modal-prog-fill{height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--ck-accent),var(--ck-gold));transition:width .6s ease}
+.modal-prog-label{font-size:9px;color:var(--ck-text-muted);letter-spacing:.06em;text-transform:uppercase}
+.modal-open-btn{margin-top:12px;width:100%;padding:9px 14px;background:var(--ck-surface2);
+  border:1.5px solid var(--ck-border);border-radius:7px;color:var(--ck-text-muted);
+  font-family:var(--font-b);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;
+  gap:6px;font-weight:500}
+.modal-open-btn:hover{background:var(--ck-accent-pale);border-color:var(--ck-accent-light);
+  color:var(--ck-accent)}
+.modal-open-btn::before{content:'↗';font-size:13px}
+
+/* ── Zone cards — Chanakya card style ── */
+.zone-card{border:1.5px solid var(--ck-border);border-radius:8px;padding:12px 14px;
+  cursor:pointer;transition:all .18s;background:var(--ck-surface);position:relative;
+  overflow:hidden;margin-bottom:6px;box-shadow:0 1px 4px rgba(26,23,20,.05)}
+.zone-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:8px 0 0 8px}
 .zone-card.z1::before{background:var(--z1)} .zone-card.z2::before{background:var(--z2)}
 .zone-card.z3::before{background:var(--z3)}
-.zone-card:hover{background:rgba(255,254,248,.045)}
-.zone-card.active{background:rgba(255,254,248,.055)}
-.zone-card.active.z1{border-color:rgba(150,85,50,.45)}
-.zone-card.active.z2{border-color:rgba(115,130,60,.45)}
-.zone-card.active.z3{border-color:rgba(202,159,73,.45)}
-.zc-name{font-family:var(--font-d);font-size:13px;margin-bottom:3px}
-.zone-card.z1 .zc-name{color:#dca882} .zone-card.z2 .zc-name{color:#adc278}
-.zone-card.z3 .zc-name{color:#dfc070}
-.zc-sub{font-size:9.5px;font-weight:300;color:var(--wl-cement);margin-bottom:7px}
-.zc-bar{height:2.5px;background:rgba(160,160,155,.12);border-radius:2px;overflow:hidden}
+.zone-card:hover{border-color:var(--ck-accent-light);box-shadow:0 3px 10px rgba(26,23,20,.09);transform:translateY(-1px)}
+.zone-card.active{border-color:var(--ck-accent-light);box-shadow:0 3px 10px rgba(139,111,71,.12)}
+.zc-name{font-family:var(--font-d);font-size:14px;margin-bottom:2px;color:var(--ck-text)}
+.zc-sub{font-size:9.5px;font-weight:400;color:var(--ck-text-muted);margin-bottom:8px}
+.zc-bar{height:3px;background:var(--ck-border);border-radius:2px;overflow:hidden}
 .zc-fill{height:100%;border-radius:2px;transition:width .5s ease}
 .zone-card.z1 .zc-fill{background:var(--z1)} .zone-card.z2 .zc-fill{background:var(--z2)}
 .zone-card.z3 .zc-fill{background:var(--z3)}
-.zc-nums{display:flex;justify-content:space-between;margin-top:5px;font-size:9.5px;color:var(--wl-cement)}
-.zc-nums .s{color:#dca882;font-weight:600} .zc-nums .a{color:var(--wl-sandstone)}
+.zc-nums{display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--ck-text-muted)}
+.zc-nums .s{color:var(--ck-accent);font-weight:600} .zc-nums .a{color:var(--ck-green)}
 
-/* Global overview filter (always visible) */
-.gf-row{display:flex;gap:5px;margin-bottom:14px}
-.gf-btn{flex:1;padding:8px 6px;border:1px solid rgba(160,160,155,.3);border-radius:3px;
-  font-size:9px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
-  background:rgba(255,254,248,.04);color:rgba(160,160,155,.7);transition:all .2s;font-family:var(--font-b)}
-.gf-btn:hover{background:rgba(255,254,248,.08);border-color:rgba(160,160,155,.55);color:var(--wl-white)}
-.gf-btn.gf-active-all{background:rgba(255,254,248,.06);border-color:rgba(160,160,155,.4);color:var(--wl-white)}
-.gf-btn.gf-active-sold{background:rgba(150,85,50,.25);border-color:var(--z1);color:#dca882}
-.gf-btn.gf-active-avail{background:rgba(250,225,200,.12);border-color:var(--wl-cement);color:var(--wl-sandstone)}
-.gf-btn.gf-active-landowner{background:#73823C;border-color:#afd060;color:#eeffb0;font-weight:700}
-.gf-btn.gf-active-share{background:#CA9F49;border-color:#f0d070;color:#1a0e00;font-weight:700}
-.filter-active-strip{font-size:8px;letter-spacing:.16em;text-transform:uppercase;padding:0 4px 12px;display:none;color:rgba(160,160,155,.5)}
-.filter-active-strip span{font-weight:600}
+/* Global filter */
+.gf-row{display:flex;gap:5px;margin-bottom:8px}
+.gf-btn{flex:1;padding:7px 5px;border:1.5px solid var(--ck-border);border-radius:6px;
+  font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;
+  background:var(--ck-surface);color:var(--ck-text-muted);transition:all .15s;
+  font-family:var(--font-b);font-weight:500}
+.gf-btn:hover{background:var(--ck-surface2);border-color:var(--ck-border-dark);color:var(--ck-text)}
+.gf-btn.gf-active-all{background:var(--ck-surface2);border-color:var(--ck-border-dark);color:var(--ck-text);font-weight:600}
+.gf-btn.gf-active-sold{background:rgba(139,111,71,.1);border-color:var(--ck-accent-light);color:var(--ck-accent);font-weight:600}
+.gf-btn.gf-active-avail{background:rgba(58,107,71,.08);border-color:#aad4ba;color:var(--ck-green);font-weight:600}
+.gf-btn.gf-active-landowner{background:rgba(115,130,60,.1);border-color:#9abd44;color:#4a5c20;font-weight:600}
+.gf-btn.gf-active-share{background:rgba(201,164,76,.12);border-color:var(--ck-gold);color:#6a5010;font-weight:600}
+.filter-active-strip{font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  padding:0 4px 10px;display:none;color:var(--ck-text-muted)}
+.filter-active-strip span{font-weight:600;color:var(--ck-accent)}
 
 /* Filters */
 .filter-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
-.ftog{padding:4px 10px;border:1px solid rgba(160,160,155,.18);border-radius:2px;
-  font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
-  background:transparent;color:var(--wl-cement);transition:all .18s;font-family:var(--font-b)}
-.ftog:hover{border-color:rgba(160,160,155,.4);color:var(--wl-white)}
-.ftog.on-sold{background:rgba(150,85,50,.25);border-color:var(--z1);color:#dca882}
-.ftog.on-avail{background:rgba(250,225,200,.12);border-color:var(--wl-cement);color:var(--wl-sandstone)}
-.ftog.on-phase1{background:rgba(202,159,73,.18);border-color:var(--wl-gold);color:var(--wl-gold)}
-.ftog.on-combined{background:rgba(202,159,73,.1);border-color:rgba(202,159,73,.5);color:var(--wl-gold)}
+.ftog{padding:4px 10px;border:1.5px solid var(--ck-border);border-radius:5px;
+  font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;
+  background:var(--ck-surface);color:var(--ck-text-muted);transition:all .15s;
+  font-family:var(--font-b);font-weight:500}
+.ftog:hover{border-color:var(--ck-border-dark);color:var(--ck-text);background:var(--ck-surface2)}
+.ftog.on-sold{background:rgba(139,111,71,.1);border-color:var(--ck-accent-light);color:var(--ck-accent)}
+.ftog.on-avail{background:rgba(58,107,71,.08);border-color:#aad4ba;color:var(--ck-green)}
+.ftog.on-phase1{background:rgba(201,164,76,.12);border-color:var(--ck-gold);color:#6a5010}
+.ftog.on-combined{background:rgba(201,164,76,.08);border-color:rgba(201,164,76,.4);color:#6a5010}
 
 /* Legend */
-.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;padding:4px 0 10px}
-.li{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--wl-cement)}
+.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;padding:4px 0 10px}
+.li{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--ck-text-muted)}
 .ls{width:18px;height:12px;border-radius:2px;flex-shrink:0}
-.ls-sold{background:rgba(150,85,50,.7);border:1.5px solid var(--z1)}
-.ls-avail{background:rgba(250,225,200,.5);border:1.5px solid var(--wl-cement)}
-.ls-comb{border:1.5px dashed var(--wl-gold);background:transparent}
-.ls-p1{border-radius:50%;background:var(--wl-gold);border:none;width:12px;height:12px}
+.ls-sold{background:rgba(150,85,50,.35);border:1.5px solid var(--z1)}
+.ls-avail{background:rgba(250,225,200,.8);border:1.5px solid var(--wl-cement)}
+.ls-comb{border:1.5px dashed var(--ck-gold);background:transparent}
+.ls-p1{border-radius:50%;background:var(--ck-gold);border:none;width:12px;height:12px}
 
 /* Villa list */
-.vlist-item{display:flex;align-items:center;gap:6px;padding:4px 4px;
-  cursor:pointer;border-radius:2px;font-size:9.5px;transition:background .15s}
-.vlist-item:hover{background:rgba(255,254,248,.04)}
-.vli-n{font-family:var(--font-d);font-size:11px;min-width:58px}
-.vli-blk{color:var(--wl-cement);flex:1;font-size:9px}
+.vlist-item{display:flex;align-items:center;gap:7px;padding:5px 6px;
+  cursor:pointer;border-radius:5px;font-size:10px;transition:background .12s;color:var(--ck-text)}
+.vlist-item:hover{background:var(--ck-surface2)}
+.vli-n{font-family:var(--font-d);font-size:12px;min-width:60px;color:var(--ck-text)}
+.vli-blk{color:var(--ck-text-muted);flex:1;font-size:9.5px}
 .vli-badges{display:flex;gap:3px}
-.badge{font-size:7.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
-  padding:2px 5px;border-radius:1px}
-.bs{background:rgba(150,85,50,.3);color:#dca882;border:1px solid rgba(150,85,50,.45)}
-.ba{background:rgba(250,225,200,.12);color:var(--wl-sandstone);border:1px solid rgba(250,225,200,.3)}
-.bp{background:rgba(202,159,73,.18);color:var(--wl-gold);border:1px solid rgba(202,159,73,.4)}
-.bc{background:rgba(202,159,73,.1);color:var(--wl-gold);border:1px dashed rgba(202,159,73,.4)}
+.badge{font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 6px;border-radius:3px}
+.bs{background:rgba(139,111,71,.1);color:var(--ck-accent);border:1px solid rgba(139,111,71,.28)}
+.ba{background:rgba(58,107,71,.07);color:var(--ck-green);border:1px solid rgba(58,107,71,.22)}
+.bp{background:rgba(201,164,76,.1);color:#6a5010;border:1px solid rgba(201,164,76,.32)}
+.bc{background:rgba(201,164,76,.07);color:#6a5010;border:1px dashed rgba(201,164,76,.32)}
 
 /* Reset btn */
-.btn-reset{width:100%;padding:7px;background:transparent;border:1px solid rgba(160,160,155,.15);
-  color:var(--wl-cement);font-family:var(--font-b);font-size:9px;letter-spacing:.14em;
-  text-transform:uppercase;cursor:pointer;transition:all .2s;border-radius:2px;margin-bottom:10px}
-.btn-reset:hover{border-color:var(--wl-gold);color:var(--wl-gold)}
+.btn-reset{width:100%;padding:7px;background:transparent;border:1.5px solid var(--ck-border);
+  color:var(--ck-text-muted);font-family:var(--font-b);font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;transition:all .18s;border-radius:6px;
+  margin-bottom:10px;font-weight:500}
+.btn-reset:hover{border-color:var(--ck-accent-light);color:var(--ck-accent);background:var(--ck-accent-pale)}
 
 /* Pillars */
 .pillars{padding:8px 12px;border-top:1px solid rgba(160,160,155,.08);
@@ -143,7 +174,7 @@ html,body{height:100%;overflow:hidden;background:var(--wl-charcoal);
   color:rgba(160,160,155,.35);text-align:center}
 
 /* ── Map ── */
-.map-area{flex:1;overflow:auto;background:#06080e;position:relative}
+.map-area{flex:1;overflow:auto;background:#0c0a08;position:relative}
 .map-area::-webkit-scrollbar{width:5px;height:5px}
 .map-area::-webkit-scrollbar-thumb{background:rgba(160,160,155,.25);border-radius:2px}
 .map-wrap{position:relative;display:inline-block}
@@ -162,7 +193,7 @@ html,body{height:100%;overflow:hidden;background:var(--wl-charcoal);
 .zpoly.gone{fill:rgba(0,0,0,0) !important;fill-opacity:0 !important;
   stroke-opacity:0 !important;pointer-events:none}
 /* Non-selected zones get a heavy dark mask so they visually recede */
-.zpoly.dimmed{fill:rgba(6,8,14,0.72) !important;fill-opacity:1 !important;
+.zpoly.dimmed{fill:rgba(12,10,8,0.72) !important;fill-opacity:1 !important;
   stroke-opacity:0 !important;pointer-events:none}
 
 /* Zone label pills on map */
@@ -189,89 +220,86 @@ html,body{height:100%;overflow:hidden;background:var(--wl-charcoal);
 body.filter-landowner .vg .vbox{fill:rgba(115,130,60,.55) !important;stroke:#afd060 !important;stroke-width:3.5 !important}
 body.filter-share     .vg .vbox{fill:rgba(202,159,73,.55) !important;stroke:#f0d070 !important;stroke-width:3.5 !important}
 
-/* ── Tooltip ── */
-.tip{position:fixed;background:rgba(13,17,24,.96);border:1px solid rgba(160,160,155,.22);
-  border-radius:3px;padding:10px 14px;font-size:10px;color:var(--wl-white);
+/* ── Tooltip — stays dark for contrast against map ── */
+.tip{position:fixed;background:rgba(26,23,20,.95);border:1px solid rgba(139,111,71,.28);
+  border-radius:7px;padding:10px 14px;font-size:10px;color:#f7f5f0;
   pointer-events:none;z-index:400;display:none;max-width:190px;
-  box-shadow:0 6px 28px rgba(0,0,0,.55)}
-.tip-name{font-family:var(--font-d);font-size:13px;margin-bottom:3px;color:var(--wl-sandstone)}
-.tip-line{color:var(--wl-cement);line-height:1.6}
+  box-shadow:0 6px 28px rgba(26,23,20,.4)}
+.tip-name{font-family:var(--font-d);font-size:13px;margin-bottom:3px;color:#FAE1C8}
+.tip-line{color:rgba(247,245,240,.65);line-height:1.6}
 .tip-status{margin-top:4px;font-size:10px}
-.tip::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--wl-gold);opacity:.3}
+.tip::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--ck-accent),var(--ck-gold));opacity:.55;border-radius:0 0 7px 7px}
 
-/* ── Modal popup ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(6,8,14,.72);z-index:500;
-  display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+/* ── Modal — Chanakya card style ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,23,20,.45);z-index:500;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal-overlay.open{display:flex}
-.modal{background:#0d1118;border:1px solid rgba(160,160,155,.2);border-radius:4px;
+.modal{background:var(--ck-surface);border:1.5px solid var(--ck-border);border-radius:12px;
   width:460px;max-width:90vw;max-height:82vh;overflow-y:auto;
-  box-shadow:0 20px 60px rgba(0,0,0,.7);position:relative}
+  box-shadow:0 20px 60px rgba(26,23,20,.18);position:relative}
 .modal::-webkit-scrollbar{width:4px}
-.modal::-webkit-scrollbar-thumb{background:rgba(160,160,155,.2)}
-.modal-header{padding:22px 24px 14px;border-bottom:1px solid rgba(160,160,155,.1);
+.modal::-webkit-scrollbar-thumb{background:var(--ck-border-dark);border-radius:2px}
+.modal-header{padding:22px 24px 14px;border-bottom:1px solid var(--ck-border);
   display:flex;justify-content:space-between;align-items:flex-start}
-.modal-title{font-family:var(--font-d);font-size:22px;color:var(--wl-sandstone)}
-.modal-subtitle{font-size:10px;font-weight:300;letter-spacing:.1em;color:var(--wl-cement);
+.modal-title{font-family:var(--font-d);font-size:22px;color:var(--ck-text)}
+.modal-subtitle{font-size:10px;font-weight:400;letter-spacing:.08em;color:var(--ck-text-muted);
   text-transform:uppercase;margin-top:3px}
-.modal-close{background:none;border:none;color:var(--wl-cement);cursor:pointer;
-  font-size:18px;padding:2px 6px;line-height:1;transition:color .2s}
-.modal-close:hover{color:var(--wl-white)}
+.modal-close{background:none;border:none;color:var(--ck-text-muted);cursor:pointer;
+  font-size:18px;padding:2px 6px;line-height:1;transition:color .15s}
+.modal-close:hover{color:var(--ck-text)}
 .modal-body{padding:16px 24px 24px}
 .modal-section{margin-bottom:16px}
-.modal-sec-title{font-size:8px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
-  color:rgba(160,160,155,.5);margin-bottom:8px;padding-bottom:5px;
-  border-bottom:1px solid rgba(160,160,155,.08)}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(160,160,155,.08)}
-.modal-cell{background:#0d1118;padding:9px 12px}
-.modal-key{font-size:9px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;
-  color:rgba(160,160,155,.5);margin-bottom:3px}
-.modal-val{font-size:12px;font-weight:500;color:var(--wl-white)}
-.modal-val.sold{color:#dca882} .modal-val.avail{color:var(--wl-sandstone)}
-.modal-val.rcvd{color:#adc278} .modal-val.notrcvd{color:rgba(160,160,155,.6)}
-.modal-val.gold{color:var(--wl-gold)}
+.modal-sec-title{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ck-text-muted);margin-bottom:8px;padding-bottom:5px;
+  border-bottom:1px solid var(--ck-border)}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--ck-border)}
+.modal-cell{background:var(--ck-surface);padding:9px 12px}
+.modal-key{font-size:9px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ck-text-muted);margin-bottom:3px}
+.modal-val{font-size:12px;font-weight:500;color:var(--ck-text)}
+.modal-val.sold{color:var(--ck-accent)} .modal-val.avail{color:var(--ck-green)}
+.modal-val.rcvd{color:var(--ck-green)} .modal-val.notrcvd{color:var(--ck-text-light)}
+.modal-val.gold{color:var(--ck-accent)}
 .modal-full{grid-column:1/-1}
-.status-pill{display:inline-flex;gap:6px;flex-wrap:wrap}
 
-/* Zoom */
+/* Zoom — matches map context, white bg */
 .zoom-bar{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:4px;z-index:60}
-.zbtn{width:34px;height:34px;background:rgba(13,17,24,.9);border:1px solid rgba(160,160,155,.18);
-  color:var(--wl-cement);font-size:17px;cursor:pointer;display:flex;align-items:center;
-  justify-content:center;border-radius:2px;transition:all .18s}
-.zbtn:hover{border-color:var(--wl-gold);color:var(--wl-gold)}
+.zbtn{width:34px;height:34px;background:rgba(255,255,255,.92);border:1.5px solid var(--ck-border);
+  color:var(--ck-text-muted);font-size:17px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;border-radius:7px;transition:all .15s;
+  box-shadow:0 2px 8px rgba(26,23,20,.1)}
+.zbtn:hover{border-color:var(--ck-accent-light);color:var(--ck-accent)}
 </style>
 </head>
 <body>
-
-<header class="hdr">
-  <!-- Logo mark (left) — replace the W below with your actual PNG logo using an <img> tag -->
-  <div class="hdr-brand">
-    <div class="hdr-logo-w">W</div>
-    <div class="hdr-logo-text">
-      <div class="hdr-logo-name">White Lotus</div>
-    </div>
-  </div>
-
-  <!-- Page title (center) -->
-  <div class="hdr-center">
-    <div class="hdr-title">Master Plan</div>
-    <div class="hdr-sub" id="hdr-sub">Select a zone to explore villa details</div>
-  </div>
-
-  <!-- Stats + sync (right) -->
-  <div class="hdr-right">
-    <div class="hdr-chips">
-      <div class="chip">95 Villas</div>
-      <div class="chip">Sold <strong id="total-sold">33</strong></div>
-      <div class="chip">Available <strong id="total-avail">62</strong></div>
-    </div>
-    <div id="sync-badge" style="font-size:8.5px;color:rgba(160,160,155,.38);letter-spacing:.08em;white-space:nowrap"></div>
-  </div>
-</header>
 
 <div class="layout">
 
   <!-- Sidebar -->
   <aside class="sb">
+
+    <!-- Stats panel — no header, stats live here -->
+    <div class="sb-top">
+      <div class="sb-top-title">Amanvana</div>
+      <div class="sb-stats-row">
+        <div class="sb-stat">
+          <div class="sb-stat-val total">95</div>
+          <div class="sb-stat-lbl">Total</div>
+        </div>
+        <div class="sb-stat">
+          <div class="sb-stat-val sold" id="total-sold">33</div>
+          <div class="sb-stat-lbl">Sold</div>
+        </div>
+        <div class="sb-stat">
+          <div class="sb-stat-val avail" id="total-avail">62</div>
+          <div class="sb-stat-lbl">Available</div>
+        </div>
+      </div>
+      <div id="hdr-sub" class="sb-zone-status"></div>
+      <div id="sync-badge" class="sb-sync"></div>
+    </div>
+
     <div class="sb-scroll">
 
       <div class="sb-label">Show on Map</div>
@@ -347,7 +375,6 @@ body.filter-share     .vg .vbox{fill:rgba(202,159,73,.55) !important;stroke:#f0d
       </div>
 
     </div>
-    <div class="pillars">Rare &middot; Timeless &middot; Soulful &middot; Conscious &middot; Bespoke</div>
   </aside>
 
   <!-- Map -->
@@ -609,8 +636,11 @@ function applyGlobalView() {
 //    Used as backup for local file:// access
 //    Also requires Share → Anyone with link → Viewer
 // ═══════════════════════════════════════════════════════════════
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXHIrGQPUchng7fcp63hGH7bni-fq3w5q20RyVieSKOJ_o3KQtq1tvBMMuaZF6rVYmJXWR4RcuITsB/pub?output=csv';
-const SHEET_ID      = '1oHOrVcmP90vPjnOG0R9DU8lfofSTEiH_4bPT_QG-Jao';
+// SHEET_CSV_URL: Go to File → Share → Publish to web → Sheet1 → CSV → Publish → paste URL here.
+// Until published, leave as '' and the JSONP fallback below will handle it.
+const SHEET_CSV_URL = '';
+// Your sheet ID from the URL: docs.google.com/spreadsheets/d/>>>THIS_PART<<
+const SHEET_ID      = '1mrRr-2to4XO_SpCZlkidSYllpiBeADXXd5ZRerBz_O8';
 
 // ══════════════════════════════════════════════════
 // SHEET DATA PIPELINE — robust fuzzy column matching
@@ -728,7 +758,7 @@ function afterSheetLoad(badge) {
   const now = new Date();
   if (badge) {
     badge.innerHTML = '✓ ' + now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) +
-      ' &nbsp;<span style="cursor:pointer;color:var(--wl-gold)" onclick="loadSheetData()" title="Refresh now">↻</span>';
+      ' &nbsp;<span style="cursor:pointer;color:var(--ck-accent)" onclick="loadSheetData()" title="Refresh now">↻</span>';
   }
 }
 
@@ -795,7 +825,7 @@ async function loadSheetData() {
       setTimeout(loadSheetData, 5 * 60 * 1000);
     } catch(e) {
       console.warn('JSONP also failed:', e);
-      if (badge) badge.innerHTML = '⚠ Could not load &nbsp;<span style="cursor:pointer;color:var(--wl-gold)" onclick="loadSheetData()">Retry ↻</span>';
+      if (badge) badge.innerHTML = '⚠ Could not load &nbsp;<span style="cursor:pointer;color:var(--ck-accent)" onclick="loadSheetData()">Retry ↻</span>';
     }
   }
 }
@@ -872,7 +902,9 @@ function selectZone(z) {
   // Sidebar
   document.querySelectorAll('.zone-card').forEach(c => c.classList.toggle('active', +c.dataset.zone===z));
   document.getElementById('filter-wrap').style.display = '';
-  document.getElementById('hdr-sub').textContent = 'Zone ' + ['','One','Two','Three'][z] + ' — click any villa for full details';
+  const sub = document.getElementById('hdr-sub');
+  sub.textContent = 'Zone ' + ['','One','Two','Three'][z] + '  ·  click a villa for details';
+  sub.style.opacity = '1';
 
   // Sync global filter into zone-level sold/avail toggles
   if (globalFilter === 'sold')  { filters.sold = true;  filters.avail = false; }
@@ -904,7 +936,9 @@ function resetView() {
   document.querySelectorAll('.zone-card').forEach(c=>c.classList.remove('active'));
   document.getElementById('filter-wrap').style.display = 'none';
   document.getElementById('vlist-wrap').style.display = 'none';
-  document.getElementById('hdr-sub').textContent = 'Select a zone to explore villa details';
+  const subEl = document.getElementById('hdr-sub');
+  subEl.textContent = 'Select a zone to explore villa details';
+  subEl.style.opacity = '0';
   // Restore zone polygons + labels
   [1,2,3].forEach(n=>{
     document.getElementById('zp'+n).className = 'zpoly zpoly-z'+n;
@@ -994,6 +1028,58 @@ function showTip(e, v) {
 function moveTip(e) { tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px'; }
 function hideTip() { tip.style.display='none'; }
 
+// ─── Dashboard integration ───
+// Returns a 0-100 progress value (or null if no data) for a villa number.
+// For combined villas, averages both partners.
+function getVillaProgress(num, isCombined, partnerNum) {
+  try {
+    const par = window.parent;
+    if (!par || !par.Store) return null;
+    function calcForVilla(n) {
+      const projs = par.Store.getProjects();
+      const pid = Object.keys(projs).find(k =>
+        projs[k].name === 'V' + n || projs[k].code === 'WL-V' + n
+      );
+      if (!pid) return null;
+      const tasks = par.Store.getTasksByProject(pid);
+      if (!tasks || !tasks.length) return 0;
+      return Math.round(tasks.reduce((s, t) => s + (t.pct || 0), 0) / tasks.length);
+    }
+    if (isCombined && partnerNum) {
+      const p1 = calcForVilla(num), p2 = calcForVilla(partnerNum);
+      if (p1 === null && p2 === null) return null;
+      return Math.round(((p1 || 0) + (p2 || 0)) / 2);
+    }
+    return calcForVilla(num);
+  } catch (e) { return null; }
+}
+
+// Opens the matching villa project in the Chanakya dashboard task sheet.
+function openVillaInDashboard(num) {
+  try {
+    const par = window.parent;
+    if (!par || !par.Store || !par.openProj) return;
+    const projs = par.Store.getProjects();
+    const pid = Object.keys(projs).find(k =>
+      projs[k].name === 'V' + num || projs[k].code === 'WL-V' + num
+    );
+    if (pid) par.openProj(pid);
+  } catch (e) {}
+}
+
+// Returns extra project-level details (dates, PM, schedule phase) from the parent dashboard.
+function getDashboardProjectDetails(num) {
+  try {
+    const par = window.parent;
+    if (!par || !par.Store) return null;
+    const projs = par.Store.getProjects();
+    const pid = Object.keys(projs).find(k =>
+      projs[k].name === 'V' + num || projs[k].code === 'WL-V' + num
+    );
+    return pid ? projs[pid] : null;
+  } catch (e) { return null; }
+}
+
 // ─── Modal ───
 function openModal(v) {
   const lbl = v.is_combined ? `Villas ${v.num} &amp; ${v.partner}` : `Villa ${v.num}`;
@@ -1003,6 +1089,38 @@ function openModal(v) {
   const sc = v.status==='Sold' ? 'sold' : 'avail';
   const rc = s => s==='Received' ? '<span class="modal-val rcvd">Received</span>' : '<span class="modal-val notrcvd">Not Received</span>';
   const zNames = ['','One','Two','Three'];
+
+  // ── Pull dashboard data (works only when inside Chanakya iframe) ──
+  const progress = getVillaProgress(v.num, v.is_combined, v.partner);
+  const dashProj = getDashboardProjectDetails(v.num);
+
+  const fmtDate = d => {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}); }
+    catch(e) { return d; }
+  };
+
+  // Phase detail rows from dashboard (dates + PM) — shown only when data available
+  const dashRows = dashProj ? `
+    <div class="modal-cell"><div class="modal-key">Start</div><div class="modal-val">${fmtDate(dashProj.start)}</div></div>
+    <div class="modal-cell"><div class="modal-key">Target End</div><div class="modal-val">${fmtDate(dashProj.end)}</div></div>
+    <div class="modal-cell"><div class="modal-key">Project Manager</div><div class="modal-val">${dashProj.pm||'—'}</div></div>
+    <div class="modal-cell"><div class="modal-key">Site Supervisor</div><div class="modal-val">${dashProj.ss||'—'}</div></div>` : '';
+
+  // Progress section — shown only when Chanakya data is available
+  const progLabel = v.is_combined ? 'Average of both villas' : 'Overall task completion';
+  const progSection = progress !== null ? `
+    <div class="modal-section">
+      <div class="modal-sec-title">Construction Progress</div>
+      <div class="modal-prog-wrap">
+        <div class="modal-prog-val">${progress}%</div>
+        <div class="modal-prog-right">
+          <div class="modal-prog-bar"><div class="modal-prog-fill" style="width:${progress}%"></div></div>
+          <div class="modal-prog-label">${progLabel}</div>
+        </div>
+      </div>
+      <button class="modal-open-btn" onclick="openVillaInDashboard(${v.num})">Open Task Sheet in Dashboard</button>
+    </div>` : '';
 
   document.getElementById('modal-body').innerHTML = `
     <div class="modal-section">
@@ -1018,15 +1136,17 @@ function openModal(v) {
       </div>
     </div>
     <div class="modal-section">
-      <div class="modal-sec-title">Status</div>
+      <div class="modal-sec-title">Status &amp; Schedule</div>
       <div class="modal-grid">
         <div class="modal-cell"><div class="modal-key">Sales Status</div><div class="modal-val ${sc}">${v.status}</div></div>
-        <div class="modal-cell"><div class="modal-key">Phase</div><div class="modal-val ${v.phase1?'gold':''} ">${v.phase||'—'}</div></div>
+        <div class="modal-cell"><div class="modal-key">Phase</div><div class="modal-val ${v.phase1?'gold':''}">${v.phase||'—'}</div></div>
         <div class="modal-cell"><div class="modal-key">Archi GFC</div>${rc(v.archi_gfc)}</div>
         <div class="modal-cell"><div class="modal-key">STR GFC</div>${rc(v.str_gfc)}</div>
+        ${dashRows}
         ${v.notes ? `<div class="modal-cell modal-full"><div class="modal-key">Notes</div><div class="modal-val" style="font-size:11px;color:var(--wl-cement)">${v.notes}</div></div>` : ''}
       </div>
-    </div>`;
+    </div>
+    ${progSection}`;
 
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -1051,16 +1171,16 @@ function buildVillaList(z) {
   const p1=zvillas.filter(v=>v.phase1).length;
   const cmb=zvillas.filter(v=>v.is_combined).length;
 
-  let html = `<div style="font-size:9px;color:var(--wl-cement);background:rgba(255,254,248,.03);
-    padding:7px 8px;border-radius:2px;margin-bottom:8px;line-height:2;letter-spacing:.03em">
-    <span style="color:#dca882">${sold} Sold</span> &nbsp;&middot;&nbsp;
-    <span style="color:var(--wl-sandstone)">${avail} Available</span> &nbsp;&middot;&nbsp;
-    <span style="color:var(--wl-gold)">${p1} Phase 1</span> &nbsp;&middot;&nbsp;
-    <span style="color:var(--wl-gold)">${cmb} Combined</span></div>`;
+  let html = `<div style="font-size:9.5px;color:var(--ck-text-muted);background:var(--ck-bg);
+    padding:7px 10px;border-radius:6px;margin-bottom:8px;line-height:2;border:1px solid var(--ck-border)">
+    <span style="color:var(--ck-accent);font-weight:600">${sold} Sold</span> &nbsp;&middot;&nbsp;
+    <span style="color:var(--ck-green);font-weight:600">${avail} Available</span> &nbsp;&middot;&nbsp;
+    <span style="color:var(--ck-gold)">${p1} Phase 1</span> &nbsp;&middot;&nbsp;
+    <span style="color:var(--ck-text-muted)">${cmb} Combined</span></div>`;
 
   zvillas.sort((a,b)=>a.num-b.num).forEach(v=>{
     const lbl = v.is_combined ? `${v.num} &amp; ${v.partner}` : v.num;
-    const nc = v.status==='Sold'?'#dca882':'var(--wl-sandstone)';
+    const nc = v.status==='Sold'?'var(--ck-accent)':'var(--ck-green)';
     html += `<div class="vlist-item" onclick="openModal(VILLAS.find(x=>x.num===${v.num}))">
       <span class="vli-n" style="color:${nc}">Villa ${lbl}</span>
       <span class="vli-blk">${v.block}</span>
