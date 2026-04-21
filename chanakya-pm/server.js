@@ -17,6 +17,9 @@ require('dotenv').config();
 // Initialise DB early — creates data/chanakya.db and schema on first run
 require('./db/db');
 
+// Auto-seed users on every startup (INSERT OR IGNORE — safe to run repeatedly)
+require('./scripts/seed-users-auto');
+
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
