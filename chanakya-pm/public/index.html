@@ -12329,10 +12329,34 @@ function _wlmsShowPreview(data){
       • If a villa project already exists (same code), it will be <strong>updated</strong> - not duplicated
     </div>
   `;
-  $('wlms-import-btn').style.display = '';
-  $('wlms-import-btn').textContent = `⬇ Import ${villas.length} Villas (${activities.length} tasks each)`;
   // Reveal optional dep mapping upload
   $('wlms-dep-section').style.display = '';
+
+  // ── Import scope selector ────────────────────────────────────────────────
+  const cats = [...new Set(activities.map(a=>a.cat).filter(Boolean))];
+  prev.innerHTML += `
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Import Scope</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:0">
+        <button id="wlms-mode-full" onclick="_wlmsSetMode('full')"
+          style="padding:10px 8px;background:var(--accent);color:#fff;border:1.5px solid var(--accent);border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;text-align:center;line-height:1.6">
+          📦 Full Import<br><span style="font-weight:400;font-size:10px">${villas.length} villas · all phases</span>
+        </button>
+        <button id="wlms-mode-phase" onclick="_wlmsSetMode('phase')"
+          style="padding:10px 8px;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;text-align:center;line-height:1.6">
+          📋 By Phase<br><span style="font-weight:400;font-size:10px">Select phases + villas</span>
+        </button>
+        <button id="wlms-mode-villa" onclick="_wlmsSetMode('villa')"
+          style="padding:10px 8px;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;text-align:center;line-height:1.6">
+          🏠 By Villa<br><span style="font-weight:400;font-size:10px">One villa, all tasks</span>
+        </button>
+      </div>
+      <div id="wlms-mode-config" style="margin-top:12px"></div>
+    </div>`;
+
+  WLMS.mode = 'full';
+  $('wlms-import-btn').style.display = '';
+  $('wlms-import-btn').textContent = `⬇ Full Import (${villas.length} villas)`;
 }
 
 function wlmsDoImport(){
@@ -12441,6 +12465,217 @@ function wlmsDoImport(){
 
   const depMsg = depLookup ? ` · ${depMatched} tasks enriched with WBS/dep data` : '';
   toast(`✅ ${projCreated} villas created + ${projUpdated} updated - ${taskCount.toLocaleString()} tasks imported${depMsg}`, 'success');
+}
+
+// ── WLMS import mode switch ───────────────────────────────────────────────────
+function _wlmsSetMode(mode){
+  WLMS.mode = mode;
+  // Update button styles
+  ['full','phase','villa'].forEach(m=>{
+    const b=$('wlms-mode-'+m); if(!b) return;
+    const on = m===mode;
+    b.style.background   = on?'var(--accent)':'var(--surface2)';
+    b.style.color        = on?'#fff':'var(--text)';
+    b.style.borderColor  = on?'var(--accent)':'var(--border)';
+  });
+  const cfg=$('wlms-mode-config'); if(!cfg||!WLMS.data) return;
+  const {villas,activities} = WLMS.data;
+  const cats = [...new Set(activities.map(a=>a.cat).filter(Boolean))];
+  if(mode==='full'){
+    cfg.innerHTML='';
+    $('wlms-import-btn').style.display='';
+  } else {
+    $('wlms-import-btn').style.display='none';
+    if(mode==='phase') _wlmsRenderPhaseConfig(cats,villas);
+    else               _wlmsRenderVillaConfig(villas);
+  }
+}
+
+// ── By Phase config ───────────────────────────────────────────────────────────
+function _wlmsRenderPhaseConfig(cats,villas){
+  const cfg=$('wlms-mode-config'); if(!cfg) return;
+  const phChks = cats.map(c=>`
+    <label style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--surface3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap">
+      <input type="checkbox" checked class="wlms-phase-chk" value="${c}" onchange="_wlmsUpdatePhaseCount()" style="accent-color:var(--accent)"> ${c}
+    </label>`).join('');
+  const vlChks = villas.map(v=>`
+    <label style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px">
+      <input type="checkbox" checked class="wlms-villa-chk" value="${v}" onchange="_wlmsUpdatePhaseCount()" style="accent-color:var(--accent)"> ${v}
+    </label>`).join('');
+  cfg.innerHTML=`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--text)">Phases / Categories</span>
+        <span style="font-size:10px;color:var(--accent);cursor:pointer" onclick="_wlmsToggleAll('.wlms-phase-chk',true)">All</span>
+        <span style="font-size:10px;color:var(--text-muted);cursor:pointer;margin-left:6px" onclick="_wlmsToggleAll('.wlms-phase-chk',false)">None</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">${phChks}</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--text)">Villas</span>
+        <span style="font-size:10px;color:var(--accent);cursor:pointer" onclick="_wlmsToggleAll('.wlms-villa-chk',true)">All</span>
+        <span style="font-size:10px;color:var(--text-muted);cursor:pointer;margin-left:6px" onclick="_wlmsToggleAll('.wlms-villa-chk',false)">None</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">${vlChks}</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+      <span id="wlms-phase-count" style="font-size:12px;color:var(--text)"></span>
+      <button class="btn btn-primary btn-sm" onclick="_wlmsDoPhaseImport()">⬇ Import Selected</button>
+    </div>`;
+  _wlmsUpdatePhaseCount();
+}
+
+function _wlmsToggleAll(sel,check){
+  document.querySelectorAll(sel).forEach(c=>{ c.checked=check; });
+  _wlmsUpdatePhaseCount();
+}
+
+function _wlmsUpdatePhaseCount(){
+  if(!WLMS.data) return;
+  const phases = new Set([...document.querySelectorAll('.wlms-phase-chk:checked')].map(c=>c.value));
+  const villaCnt = document.querySelectorAll('.wlms-villa-chk:checked').length;
+  const taskCnt  = WLMS.data.activities.filter(a=>phases.has(a.cat)).length;
+  const el=$('wlms-phase-count');
+  if(el) el.textContent = phases.size
+    ? `${taskCnt} task${taskCnt!==1?'s':''} × ${villaCnt} villa${villaCnt!==1?'s':''} = ${taskCnt*villaCnt} total rows`
+    : 'Select at least one phase';
+}
+
+// ── By Villa config ───────────────────────────────────────────────────────────
+function _wlmsRenderVillaConfig(villas){
+  const cfg=$('wlms-mode-config'); if(!cfg) return;
+  const opts = villas.map(v=>`<option value="${v}">${v}</option>`).join('');
+  cfg.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <label style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap">Select Villa</label>
+      <select class="fss" id="wlms-villa-sel" style="width:160px" onchange="_wlmsVillaSelChanged()">
+        <option value="">— choose —</option>${opts}
+      </select>
+    </div>
+    <div id="wlms-villa-info"></div>`;
+}
+
+function _wlmsVillaSelChanged(){
+  const villa = ($('wlms-villa-sel')||{}).value; if(!villa||!WLMS.data) return;
+  const {activities,handover} = WLMS.data;
+  const acts  = activities.filter(a=>a.villaDates[villa] && (a.villaDates[villa].start||a.villaDates[villa].end));
+  const cats  = [...new Set(acts.map(a=>a.cat).filter(Boolean))];
+  const projs = Store.getProjects();
+  const exists = !!projs['wl-'+villa.toLowerCase()];
+  let minD='9999-99', maxD='0000-00';
+  acts.forEach(a=>{ const d=a.villaDates[villa]; if(d.start&&d.start<minD) minD=d.start; if(d.end&&d.end>maxD) maxD=d.end; });
+  const fmtD = d=>{ if(!d||d.startsWith('9999')||d.startsWith('0000')) return '?';
+    const [y,m,dd]=d.split('-'); return `${parseInt(dd)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]} ${y}`; };
+  $('wlms-villa-info').innerHTML=`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:11px;line-height:2">
+      <div><strong>${acts.length} tasks</strong> · ${cats.length} phases (${cats.join(', ')})</div>
+      <div>Timeline: <strong>${fmtD(minD)}</strong> → <strong>${fmtD(maxD)}</strong></div>
+      ${handover[villa]?`<div>Handover target: <strong>${fmtD(handover[villa])}</strong></div>`:''}
+      <div>${exists
+        ?`<span style="color:var(--success)">✓ Project exists — tasks will be replaced</span>`
+        :`<span style="color:var(--accent)">⊕ New project will be created</span>`}</div>
+    </div>
+    <div style="text-align:right;margin-top:10px">
+      <button class="btn btn-primary btn-sm" onclick="_wlmsDoVillaImport()">⬇ Import ${villa} (${acts.length} tasks)</button>
+    </div>`;
+}
+
+// ── Phase import executor ─────────────────────────────────────────────────────
+function _wlmsDoPhaseImport(){
+  if(!WLMS.data){ toast('No data loaded','error'); return; }
+  const phases  = new Set([...document.querySelectorAll('.wlms-phase-chk:checked')].map(c=>c.value));
+  const villas  = [...document.querySelectorAll('.wlms-villa-chk:checked')].map(c=>c.value);
+  if(!phases.size){ toast('Select at least one phase','error'); return; }
+  if(!villas.length){ toast('Select at least one villa','error'); return; }
+  const {activities,handover} = WLMS.data;
+  const depLookup = WLMS.depData ? _wlmsDepLookup(WLMS.depData) : null;
+  const filteredActs = activities.filter(a=>phases.has(a.cat));
+  const projs    = Store.getProjects();
+  const allTasks = Store.getAllTasks();
+  let taskCount=0;
+  for(const villa of villas){
+    const pid = 'wl-'+villa.toLowerCase();
+    // Create project stub if missing
+    if(!projs[pid]){
+      const meta = WLMS_VILLA_META[villa]||{};
+      let ps=null; filteredActs.forEach(a=>{ const d=a.villaDates[villa]; if(d&&d.start&&(!ps||d.start<ps)) ps=d.start; });
+      projs[pid]={ id:pid, name:`Villa ${villa}${meta.block?' - '+meta.block:''}`.trim(), code:villa,
+        status:'not-started', type:'Residential Villa', start:ps||'', end:handover[villa]||'',
+        pm:'', ss:meta.contractor||'', budget:0, area:0,
+        notes:`Zone: ${meta.zone||''}\nBlock: ${meta.block||''}\nContractor: ${meta.contractor||''}` };
+    }
+    // Merge: keep tasks from other phases, replace tasks from selected phases
+    const kept = (allTasks[pid]||[]).filter(t=>!phases.has(t.sub));
+    const seq0 = kept.length;
+    const newTasks = [];
+    filteredActs.forEach((act,i)=>{
+      const d=act.villaDates[villa]; if(!d||(!d.start&&!d.end)) return;
+      newTasks.push(_wlmsBuildVillaTask(pid,villa,act,d,depLookup,seq0+i+1));
+    });
+    allTasks[pid] = [...kept, ...newTasks];
+    taskCount += newTasks.length;
+  }
+  Store.saveProjects(projs);
+  Store.saveTasksMap(allTasks);
+  _refreshViews({sb:true});
+  toast(`Phase import done — ${taskCount} tasks across ${villas.length} villa${villas.length!==1?'s':''}`, 'success');
+  closeMod('importMod');
+}
+
+// ── Villa import executor ─────────────────────────────────────────────────────
+function _wlmsDoVillaImport(){
+  if(!WLMS.data){ toast('No data loaded','error'); return; }
+  const villa = ($('wlms-villa-sel')||{}).value;
+  if(!villa){ toast('Select a villa first','error'); return; }
+  const {activities,handover} = WLMS.data;
+  const meta      = WLMS_VILLA_META[villa]||{};
+  const pid       = 'wl-'+villa.toLowerCase();
+  const depLookup = WLMS.depData ? _wlmsDepLookup(WLMS.depData) : null;
+  const projs     = Store.getProjects();
+  const allTasks  = Store.getAllTasks();
+  // Compute project start from earliest task
+  let ps=null;
+  activities.forEach(a=>{ const d=a.villaDates[villa]; if(d&&d.start&&(!ps||d.start<ps)) ps=d.start; });
+  const projName = `Villa ${villa}${meta.block?' - '+meta.block:''}`.trim();
+  const projNotes= `Zone: ${meta.zone||''}\nBlock: ${meta.block||''}\nContractor: ${meta.contractor||''}\nHandover Target: ${handover[villa]||''}`;
+  if(projs[pid]){
+    Object.assign(projs[pid],{ name:projName, start:ps||projs[pid].start,
+      end:handover[villa]||projs[pid].end, ss:meta.contractor||projs[pid].ss||'', notes:projNotes });
+  } else {
+    projs[pid]={ id:pid, name:projName, code:villa, status:'not-started', type:'Residential Villa',
+      start:ps||'', end:handover[villa]||'', pm:'', ss:meta.contractor||'', budget:0, area:0, notes:projNotes };
+  }
+  let seq=1;
+  const tasks=[];
+  activities.forEach(act=>{
+    const d=act.villaDates[villa]; if(!d||(!d.start&&!d.end)) return;
+    tasks.push(_wlmsBuildVillaTask(pid,villa,act,d,depLookup,seq++));
+  });
+  allTasks[pid]=tasks;
+  Store.saveProjects(projs);
+  Store.saveTasksMap(allTasks);
+  _refreshViews({sb:true});
+  toast(`Imported ${tasks.length} tasks for ${villa}`, 'success');
+  closeMod('importMod');
+}
+
+// ── Shared task builder (used by all 3 import modes) ─────────────────────────
+function _wlmsBuildVillaTask(pid,villa,act,dates,depLookup,seq){
+  let dur=0, wbs='', pred='', taskNotes='';
+  if(dates.start&&dates.end) dur=Math.max(1,Math.round((new Date(dates.end)-new Date(dates.start))/86400000)+1);
+  if(depLookup){
+    const dep=_wlmsFindDep(act.name,depLookup);
+    if(dep){ wbs=dep.wbs||''; pred=dep.pred||''; taskNotes=dep.notes||''; if(dep.dur&&!dur) dur=parseInt(dep.dur)||0; }
+  }
+  return {
+    id:`${pid}-t${seq}`, name:act.name,
+    phase:act.phase||'', sub:act.cat||'',
+    wbs, pred,
+    start:dates.start||'', end:dates.end||'',
+    dur, pct:0, owner:'', notes:taskNotes,
+    status:'pending', source:'wl-master-schedule'
+  };
 }
 
 // ============================================================
