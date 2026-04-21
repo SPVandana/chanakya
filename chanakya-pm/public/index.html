@@ -569,7 +569,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(201,168,76,.15) 0%,transparent 70%);pointer-events:none"></div>
         <div style="margin-bottom:16px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
         <div style="font-family:'DM Serif Display',serif;font-size:26px;font-weight:600;color:#c9a84c;margin-bottom:6px">Amanvana</div>
-        <div style="font-size:12px;color:#8a7a68;margin-bottom:20px;line-height:1.5">Premium villa development &nbsp;·&nbsp; 4 phases</div>
+        <div style="font-size:12px;color:#8a7a68;margin-bottom:20px;line-height:1.5">White Lotus IVC &nbsp;·&nbsp; 34 Villas</div>
         <div id="sel-amanvana-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px">
             <div id="sel-am-units" style="font-size:20px;font-weight:700;color:#c9a84c">-</div>
@@ -598,7 +598,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(58,95,139,.2) 0%,transparent 70%);pointer-events:none"></div>
         <div style="font-size:36px;margin-bottom:16px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div>
         <div style="font-family:'DM Serif Display',serif;font-size:26px;font-weight:600;color:#6ea8d8;margin-bottom:6px">Kandhavara</div>
-        <div style="font-size:12px;color:#8a7a68;margin-bottom:20px;line-height:1.5">Luxury residences &nbsp;·&nbsp; 2 phases</div>
+        <div style="font-size:12px;color:#8a7a68;margin-bottom:20px;line-height:1.5">Kandhavara &nbsp;·&nbsp; Phase 1 &amp; 2</div>
         <div id="sel-kandhavar-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px">
             <div id="sel-kd-units" style="font-size:20px;font-weight:700;color:#6ea8d8">-</div>
@@ -621,6 +621,9 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       </div>
 
     </div>
+
+    <!-- Extra (user-created) development cards -->
+    <div id="sel-extra-devs" style="display:none;margin-top:14px;display:flex;flex-direction:column;gap:10px"></div>
 
     <!-- View All + Add Development -->
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px">
@@ -6537,6 +6540,7 @@ async function boot(){
     $('dash-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
     _refreshViews({sb:true});
     setTimeout(refreshApprovalsBadge, 200);
+    _maybeShowEmptyDevBanner();
   } catch(err){
     console.error('[CKY] boot error:', err);
     // Still show the app — better to show a partial state than stay stuck on the loading screen
@@ -6547,6 +6551,32 @@ async function boot(){
   }
 }
 
+
+// ─── Empty development import banner ────────────────────────────────────────
+function _maybeShowEmptyDevBanner(){
+  // Only show when inside a named development (not ALL)
+  const dev=_origDevFilter;
+  if(!dev||dev==='ALL') return;
+  const projs=Object.values(Store.getProjects());
+  const realProjs=projs.filter(p=>(p.dev||'Amanvana')===dev&&!['landscape','waterbody','development','phase-summary'].includes(p.type));
+  const old=$('dev-empty-banner'); if(old) old.remove();
+  if(realProjs.length>0) return; // has real data — no banner needed
+  const banner=document.createElement('div');
+  banner.id='dev-empty-banner';
+  banner.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 40px;text-align:center;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.4)';
+  banner.innerHTML=`
+    <div style="font-size:40px;margin-bottom:14px">📋</div>
+    <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px">${dev} has no data yet</div>
+    <div style="font-size:12px;color:var(--text-muted);line-height:1.7;margin-bottom:20px">
+      Import the master schedule to populate this development.<br>
+      Export from Google Sheets → CSV → upload here.
+    </div>
+    <button class="btn btn-primary" onclick="importAll();this.closest('#dev-empty-banner').remove()" style="width:100%;justify-content:center;margin-bottom:10px">
+      ⬇ Import Master Schedule
+    </button>
+    <button onclick="this.closest('#dev-empty-banner').remove()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:4px">Dismiss</button>`;
+  document.getElementById('app-body').appendChild(banner);
+}
 
 // ============================================================
 //  SYNC PROJECT STATUS FROM TASKS
@@ -7457,7 +7487,9 @@ function devMgmtAddDev(){
   projs[id]={id,name:name+' (Summary)',code:id,type:'phase-summary',dev:name,phase:'Overview',status:'not-started',start:'',end:'',budget:0,area:0,notes:'Development placeholder'};
   Store.saveProjects(projs);Store.flush();
   _refreshViews();_renderDevMgmt();
-  toast('Development "'+name+'" created','success');
+  // If user is on the select screen, refresh it immediately so the new card appears
+  if($('screen-select').style.display!=='none') showSelectScreen();
+  toast('Development "'+name+'" created — click the new card to open it','success');
 }
 function devMgmtRenameDev(oldName){
   const newName=(prompt('Rename development "'+oldName+'" to:',oldName)||'').trim();
@@ -12396,10 +12428,12 @@ function wlmsDoImport(){
       });
       projUpdated++;
     } else {
+      const _importDev=(_currentDev&&_currentDev!=='ALL')?_currentDev:'Amanvana';
       projs[pid] = {
         id:    pid,
         name:  projName,
         code:  villa,
+        dev:   _importDev,
         status:'not-started',
         type:  'Residential Villa',
         start: projStart || '',
@@ -12599,9 +12633,10 @@ function _wlmsDoPhaseImport(){
     // Create project stub if missing
     if(!projs[pid]){
       const meta = WLMS_VILLA_META[villa]||{};
+      const _importDev=(_currentDev&&_currentDev!=='ALL')?_currentDev:'Amanvana';
       let ps=null; filteredActs.forEach(a=>{ const d=a.villaDates[villa]; if(d&&d.start&&(!ps||d.start<ps)) ps=d.start; });
       projs[pid]={ id:pid, name:`Villa ${villa}${meta.block?' - '+meta.block:''}`.trim(), code:villa,
-        status:'not-started', type:'Residential Villa', start:ps||'', end:handover[villa]||'',
+        dev:_importDev, status:'not-started', type:'Residential Villa', start:ps||'', end:handover[villa]||'',
         pm:'', ss:meta.contractor||'', budget:0, area:0,
         notes:`Zone: ${meta.zone||''}\nBlock: ${meta.block||''}\nContractor: ${meta.contractor||''}` };
     }
@@ -12639,11 +12674,12 @@ function _wlmsDoVillaImport(){
   activities.forEach(a=>{ const d=a.villaDates[villa]; if(d&&d.start&&(!ps||d.start<ps)) ps=d.start; });
   const projName = `Villa ${villa}${meta.block?' - '+meta.block:''}`.trim();
   const projNotes= `Zone: ${meta.zone||''}\nBlock: ${meta.block||''}\nContractor: ${meta.contractor||''}\nHandover Target: ${handover[villa]||''}`;
+  const _importDev=(_currentDev&&_currentDev!=='ALL')?_currentDev:'Amanvana';
   if(projs[pid]){
     Object.assign(projs[pid],{ name:projName, start:ps||projs[pid].start,
       end:handover[villa]||projs[pid].end, ss:meta.contractor||projs[pid].ss||'', notes:projNotes });
   } else {
-    projs[pid]={ id:pid, name:projName, code:villa, status:'not-started', type:'Residential Villa',
+    projs[pid]={ id:pid, name:projName, code:villa, dev:_importDev, status:'not-started', type:'Residential Villa',
       start:ps||'', end:handover[villa]||'', pm:'', ss:meta.contractor||'', budget:0, area:0, notes:projNotes };
   }
   let seq=1;
@@ -13561,9 +13597,10 @@ function showSelectScreen(){
   if(!_currentUser)return;
   $('sel-user').textContent='Signed in as '+_currentUser.name;
   const projs=Object.values(Store.getProjects()), tasksAll=Store.getAllTasks();
+  // Update Amanvana / Kandhavara stat tiles
   ['Amanvana','Kandhavara'].forEach(dev=>{
     const dvP=projs.filter(p=>(p.dev||'Amanvana')===dev);
-    const dvVillas=dvP.filter(p=>!['landscape','waterbody','development'].includes(p.type));
+    const dvVillas=dvP.filter(p=>!['landscape','waterbody','development','phase-summary'].includes(p.type));
     const dvT=dvP.flatMap(p=>tasksAll[p.id]||[]);
     const pct=_wPct(dvT);
     const onTrack=dvVillas.filter(p=>p.status==='on-track').length;
@@ -13573,9 +13610,38 @@ function showSelectScreen(){
     if(ue)ue.textContent=dev==='Amanvana'?95:dvVillas.length;
     if(pe)pe.textContent=pct+'%';if(oe)oe.textContent=onTrack;if(re)re.textContent=atRisk;
   });
+  // Render user-created development cards
+  _renderExtraDevCards(projs, tasksAll);
   const sel=$('screen-select');
   sel.style.opacity='0'; sel.style.display='flex';
   requestAnimationFrame(()=>{ sel.style.transition='opacity .35s'; sel.style.opacity='1'; });
+}
+
+function _renderExtraDevCards(projs, tasksAll){
+  const wrap=$('sel-extra-devs'); if(!wrap) return;
+  const fixed=new Set(['Amanvana','Kandhavara']);
+  const extraDevs=[...new Set(projs.map(p=>p.dev).filter(d=>d&&!fixed.has(d)))];
+  if(!extraDevs.length){ wrap.style.display='none'; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML=extraDevs.map(dev=>{
+    const dvP=projs.filter(p=>(p.dev||'')===dev);
+    const dvVillas=dvP.filter(p=>!['landscape','waterbody','development','phase-summary'].includes(p.type));
+    const dvT=dvP.flatMap(p=>(tasksAll[p.id]||[]));
+    const pct=_wPct(dvT);
+    const isEmpty=dvVillas.length===0;
+    return `<div onclick="selectDev('${dev.replace(/'/g,'\\\'')}')"
+      style="background:rgba(255,255,255,.06);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:18px 22px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:space-between"
+      onmouseover="this.style.background='rgba(255,255,255,.11)';this.style.borderColor='rgba(255,255,255,.3)';this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.borderColor='rgba(255,255,255,.14)';this.style.transform='none'">
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:600;color:#f5f0e8;margin-bottom:3px">${dev}</div>
+        ${isEmpty
+          ?`<div style="font-size:11px;color:#8a7a68">Empty — open to import data</div>`
+          :`<div style="font-size:11px;color:#8a7a68">${dvVillas.length} unit${dvVillas.length!==1?'s':''} · ${pct}% progress</div>`}
+      </div>
+      <div style="font-size:12px;color:#8a7a68;font-weight:600;letter-spacing:.03em">Open →</div>
+    </div>`;
+  }).join('');
 }
 
 function selectDev(dev){
@@ -13592,7 +13658,7 @@ function selectDev(dev){
       badge.id='dev-badge';
       badge.style.cssText='font-size:11px;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;cursor:pointer;flex-shrink:0;transition:.15s';
       badge.title='Click to switch development';
-      badge.textContent=dev==='Amanvana'?'Amanvana':'Kandhavara';
+      badge.textContent=dev;
       badge.onmouseover=()=>badge.style.background='var(--surface3)';
       badge.onmouseout=()=>badge.style.background='var(--surface2)';
       badge.onclick=switchDev;
