@@ -62,12 +62,26 @@ db.exec(`
 
   -- Seed the singleton row if it doesn't exist yet
   INSERT OR IGNORE INTO app_data (id) VALUES (1);
+
+  -- Audit log: every create / edit / delete action
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts          TEXT    NOT NULL DEFAULT (datetime('now')),
+    user_id     TEXT    NOT NULL DEFAULT '',
+    user_name   TEXT    NOT NULL DEFAULT '',
+    action      TEXT    NOT NULL,   -- 'create' | 'edit' | 'delete' | 'copy-tasks' | 'reschedule' | …
+    entity_type TEXT    NOT NULL,   -- 'task' | 'project' | …
+    entity_id   TEXT    NOT NULL DEFAULT '',
+    entity_name TEXT    NOT NULL DEFAULT ''
+  );
 `);
 
 // ─── Migrations (safe to run on every start) ─────────────────────────────────
 // Add permissions column if it doesn't exist yet (existing deployments)
 try { db.exec("ALTER TABLE users ADD COLUMN permissions TEXT NOT NULL DEFAULT 'view'"); }
 catch(_){/* column already exists */}
+
+// audit_log table is created above via CREATE TABLE IF NOT EXISTS — no ALTER needed
 
 // ─── Prepared statements ──────────────────────────────────────────────────────
 
@@ -89,6 +103,16 @@ const stmts = {
       password_hash = COALESCE(excluded.password_hash, users.password_hash)
   `),
   listUsers      : db.prepare('SELECT id, email, name, role, permissions, created_at FROM users ORDER BY name'),
+
+  /** Audit log */
+  insertAudit    : db.prepare(`
+    INSERT INTO audit_log (user_id, user_name, action, entity_type, entity_id, entity_name)
+    VALUES (@userId, @userName, @action, @entityType, @entityId, @entityName)
+  `),
+  listAudit      : db.prepare(`
+    SELECT id, ts, user_id, user_name, action, entity_type, entity_id, entity_name
+    FROM audit_log ORDER BY id DESC LIMIT 500
+  `),
 
   /** App data */
   getAppData     : db.prepare('SELECT projs, resources, meta, tasks, baselines, planner FROM app_data WHERE id = 1'),

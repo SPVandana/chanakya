@@ -24,8 +24,9 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 
-const authRoutes = require('./routes/auth');
-const dataRoutes = require('./routes/data');
+const authRoutes  = require('./routes/auth');
+const dataRoutes  = require('./routes/data');
+const auditRoutes = require('./routes/audit');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -50,8 +51,9 @@ app.get('/health', (_req, res) => {
 });
 
 // ─── API routes ───────────────────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
-app.use('/api',      dataRoutes);   // /api/data, /api/backup, /api/export
+app.use('/api/auth',  authRoutes);
+app.use('/api',       dataRoutes);   // /api/data, /api/backup, /api/export
+app.use('/api/audit', auditRoutes);  // /api/audit — audit log
 
 // ─── Runtime config (Google Client ID, etc.) ─────────────────────────────────
 // Serves /config.js so the frontend can read GOOGLE_CLIENT_ID without it being

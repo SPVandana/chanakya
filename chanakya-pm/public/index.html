@@ -217,6 +217,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .fl{display:block;font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
 .fii,.fss,.ftt{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s}
 .fii:focus,.fss:focus,.ftt:focus{border-color:var(--accent-light);box-shadow:0 0 0 3px rgba(139,111,71,.07)}
+.inp-error{border-color:var(--danger)!important;background:rgba(184,55,51,.04)!important;animation:shake .25s ease}
 .ftt{resize:vertical;min-height:60px}
 .fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -255,6 +256,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .toast{background:var(--text);color:#fff;padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;box-shadow:var(--shadow-lg);animation:tin .2s ease}
 .toast.success{background:var(--success)}.toast.error{background:var(--danger)}.toast.warning{background:var(--warning)}
 @keyframes tin{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:600;min-width:170px;padding:4px;display:none}
 .ctx-menu.open{display:block}
 .cxi{padding:6px 11px;font-size:12px;cursor:pointer;border-radius:var(--radius-xs);display:flex;align-items:center;gap:7px;transition:.1s}
@@ -654,6 +656,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <button class="btn btn-ghost btn-sm" id="approvalsBtn" onclick="toggleApprovalsPanel()" title="Approval Requests" style="position:relative;padding-right:10px">
       ✅ Approvals<span id="approvalsBadge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;font-weight:700;line-height:17px;text-align:center;padding:0 4px">0</span>
     </button>
+    <button class="btn btn-ghost btn-sm" id="auditLogBtn" onclick="openAuditLog()" title="View audit log" style="display:none">📋 Audit Log</button>
     <button class="btn btn-ghost btn-sm" onclick="openDevMgmt()">⚙ Manage</button>
     <div style="position:relative;display:inline-block" id="exportDropWrap">
       <button class="btn btn-ghost btn-sm" onclick="toggleExportDrop(event)"><span id="connDot" style="width:8px;height:8px;border-radius:50%;background:#b87333;display:inline-block;margin-right:5px;vertical-align:middle" title="Connecting..."></span>Export ▾</button>
@@ -796,8 +799,9 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         </div>
         <div class="dh-right">
           <button class="btn btn-ghost btn-sm" onclick="openEditProj()">Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCopyTasksMod()">Copy Tasks</button>
           <button class="btn btn-ghost btn-sm" onclick="exportCSV()">CSV</button>
-          <button class="btn btn-ghost btn-sm" onclick="printReport()">Print</button>
+          <button class="btn btn-ghost btn-sm" onclick="printGantt()">Print Gantt</button>
         </div>
       </div>
       <div id="det-stats"></div>
@@ -1244,6 +1248,48 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <div class="mftr">
       <button class="btn btn-ghost" onclick="closeMod('devMgmtMod')">Close</button>
       <button class="btn btn-primary btn-sm" onclick="devMgmtAddDev()">+ Add Development</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIT LOG MODAL -->
+<div class="modal-ov" id="auditLogMod">
+  <div class="modal" style="width:760px;max-width:96vw">
+    <div class="mhdr">
+      <div class="mtitle">📋 Audit Log — Who Changed What, When</div>
+      <button class="mclose" onclick="closeMod('auditLogMod')">✕</button>
+    </div>
+    <div class="mbdy" style="padding:0;max-height:72vh;overflow-y:auto">
+      <div id="auditLogBody" style="padding:10px 16px">
+        <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading…</div>
+      </div>
+    </div>
+    <div class="mftr">
+      <button class="btn btn-ghost" onclick="closeMod('auditLogMod')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- COPY TASKS MODAL -->
+<div class="modal-ov" id="copyTasksMod">
+  <div class="modal" style="max-width:440px">
+    <div class="mhdr">
+      <div class="mtitle">Copy Task Structure</div>
+      <button class="mclose" onclick="closeMod('copyTasksMod')">✕</button>
+    </div>
+    <div class="mbdy" style="padding:20px 24px 24px">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Copy all tasks from another villa into <strong id="copyTarget"></strong>. Existing tasks in the target will be <strong style="color:var(--danger)">replaced</strong>.</p>
+      <div class="fg">
+        <label class="fl">Copy tasks from</label>
+        <select class="fss" id="copySourcePid" style="width:100%">
+          <option value="">— select a villa —</option>
+        </select>
+      </div>
+      <div id="copySourceInfo" style="font-size:11px;color:var(--text-muted);margin-top:8px;min-height:16px"></div>
+      <div style="display:flex;gap:8px;margin-top:18px">
+        <button class="btn btn-ghost" style="flex:1" onclick="closeMod('copyTasksMod')">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" onclick="copyVillaTasks()">Copy Tasks</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1771,6 +1817,9 @@ PH.forEach(p=>{ PH_BY_ID[p.id]=p; PH_BY_NAME[p.name.toLowerCase()]=p; });
 // ============================================================
 //  DB
 // ============================================================
+// ── Tiny HTML escape helper ────────────────────────────────────────────────
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
 // ── API endpoint (auto-detected) ──────────────────────────────────────────
 const CKY_API = (()=>{const{protocol,origin}=window.location;return protocol!=='file:'?origin:null;})();
 let _serverOK = false;
@@ -2052,9 +2101,11 @@ const S = {
   calM:new Date().getMonth(), calY:new Date().getFullYear(),
   ctxId:null, gStart:null, gEnd:null,
   _gq:'', _gs:'', _gz:'', _gc:'',
-  dashColl:{}, // track dashboard phase expand/collapse: key=devName_phase, false=open, true/undefined=collapsed
-  gSelTask:null, // selected task in Gantt view for dependency highlighting
-  wbsLastTaskContext:null, // { phaseId, phaseName, subphaseId, subphaseName } from last WBS row interaction
+  dashColl:{},
+  gSelTask:null,
+  wbsLastTaskContext:null,
+  wbsFilters:{q:'',sf:'',pf:'',af:''}, // persists WBS filter state across re-renders
+  ganttDrag:null, // active Gantt drag state { tid, barX, offsetWithinBar, cw, gs }
 };
 
 // ============================================================
@@ -2072,7 +2123,20 @@ const aClr = name=>{const c=['#8b6f47','#3a5f8b','#4a7c59','#8b3a3a','#6b4a8b','
 const ini = name=>name?name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'?';
 const sbl = s=>({'not-started':'b-not-started','in-progress':'b-in-progress','completed':'b-completed','blocked':'b-blocked','on-hold':'b-on-hold','on-track':'b-on-track','at-risk':'b-at-risk','delayed':'b-delayed'})[s]||'b-not-started';
 const slt = s=>({'not-started':'Not Started','in-progress':'In Progress','completed':'Completed','blocked':'Blocked','on-hold':'On Hold','on-track':'On Track','at-risk':'At Risk','delayed':'Delayed'})[s]||s;
-const toast = (msg,type='',ms=3000)=>{const b=document.getElementById('toastBox');const e=document.createElement('div');e.className='toast '+(type||'');e.textContent=msg;b.appendChild(e);setTimeout(()=>e.remove(),ms);};
+const toast = (msg,type='',ms=3000,action=null)=>{
+  const b=document.getElementById('toastBox');
+  const e=document.createElement('div');e.className='toast '+(type||'');
+  if(action){
+    const txt=document.createElement('span');txt.textContent=msg;
+    const btn=document.createElement('button');btn.textContent=action.label;
+    btn.style.cssText='margin-left:10px;padding:2px 9px;border:1.5px solid currentColor;border-radius:4px;background:transparent;cursor:pointer;font-size:11px;color:inherit;font-family:inherit;font-weight:600';
+    let tid=setTimeout(()=>e.remove(),ms);
+    btn.onclick=()=>{clearTimeout(tid);action.fn();e.remove();};
+    e.appendChild(txt);e.appendChild(btn);
+  } else { e.textContent=msg; }
+  b.appendChild(e);
+  if(!action)setTimeout(()=>e.remove(),ms);
+};
 const closeMod = id=>document.getElementById(id).classList.remove('open');
 const openMod = id=>document.getElementById(id).classList.add('open');
 const $ = id=>document.getElementById(id);
@@ -6638,6 +6702,42 @@ function syncProjStatus(pid){
   }
 }
 
+// Returns a human-readable explanation of how a project's status was derived.
+// Used as a tooltip on status badges so users understand the logic.
+function _statusTooltip(pid){
+  const ts=Store.getTasksByProject(pid).filter(t=>!t.isGroupHeader);
+  if(!ts.length)return'No tasks — status not yet derived';
+  const today=new Date().toISOString().slice(0,10);
+  const total=ts.length;
+  const done=ts.filter(t=>t.status==='completed').length;
+  const ip=ts.filter(t=>t.status==='in-progress').length;
+  const blocked=ts.filter(t=>t.status==='blocked');
+  const overdue=ts.filter(t=>t.endDate&&t.endDate<today&&t.status!=='completed');
+  const allDone=ts.every(t=>t.status==='completed'||t.progress>=100);
+  const anyStarted=ts.some(t=>(t.progress||0)>0||t.status==='in-progress'||t.status==='completed');
+  if(allDone)return`✓ Completed — all ${total} tasks done`;
+  if(!anyStarted)return`○ Not Started — ${total} tasks, none begun yet`;
+  if(blocked.length||overdue.length){
+    const r=[];
+    if(overdue.length)r.push(`${overdue.length} task${overdue.length>1?'s':''} past due date`);
+    if(blocked.length)r.push(`${blocked.length} blocked`);
+    return`⚠ At Risk: ${r.join(', ')} · ${done}/${total} done`;
+  }
+  return`● On Track — ${done} done, ${ip} in progress of ${total} total`;
+}
+
+// ── Audit log helper ───────────────────────────────────────────────────────
+// Fire-and-forget: records a user action to the server audit_log table.
+// Silent on failure — never blocks or alerts the user.
+function _logAudit(action, entityType, entityId, entityName){
+  if(!CKY_API||!_getToken())return; // file:// mode or not logged in
+  fetch(CKY_API+'/api/audit',{
+    method:'POST',
+    headers:_authHdr(),
+    body:JSON.stringify({action,entityType,entityId:entityId||'',entityName:entityName||''}),
+  }).catch(()=>{}); // ignore network errors silently
+}
+
 // ── Batched dashboard refresh ──────────────────────────────────────────────
 // Replaces the pattern of calling renderGrid()+renderStats()+renderSB() on
 // consecutive lines. Uses requestAnimationFrame so multiple synchronous
@@ -6713,25 +6813,24 @@ function renderTodaysTasks(){
 
   const todayStr=new Date().toISOString().slice(0,10);
 
-  // Set min/max bounds on date picker (today and 7 days back)
-  const minD=new Date(todayStr);
-  minD.setDate(minD.getDate()-7);
-  dateInp.min=minD.toISOString().slice(0,10);
-  dateInp.max=todayStr;
+  // Allow past and future dates — useful for planning ahead
   if(!dateInp.value)dateInp.value=todayStr;
 
   const selDate=dateInp.value||todayStr;
   const isToday=(selDate===todayStr);
-  const yesterday=new Date(todayStr);
-  yesterday.setDate(yesterday.getDate()-1);
+  const yesterday=new Date(todayStr);yesterday.setDate(yesterday.getDate()-1);
   const yStr=yesterday.toISOString().slice(0,10);
+  const tomorrow=new Date(todayStr);tomorrow.setDate(tomorrow.getDate()+1);
+  const tmrStr=tomorrow.toISOString().slice(0,10);
 
   // Heading
-  if(selDate===todayStr) titleEl.textContent="Today's Tasks";
-  else if(selDate===yStr) titleEl.textContent="Yesterday's Tasks";
-  else {
+  if(selDate===todayStr)titleEl.textContent="Today's Tasks";
+  else if(selDate===yStr)titleEl.textContent="Yesterday's Tasks";
+  else if(selDate===tmrStr)titleEl.textContent="Tomorrow's Tasks";
+  else{
     const d=new Date(selDate+'T00:00:00');
-    titleEl.textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+'  -  Tasks';
+    const isFuture=selDate>todayStr;
+    titleEl.textContent=(isFuture?'Upcoming — ':'')+d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   }
 
   // Gather all tasks active on selDate (startDate ≤ selDate ≤ endDate)
@@ -7208,7 +7307,7 @@ function renderGrid(){
                   </div>`:''}
                 </div>
                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-                  <span class="badge ${sbl(_dSt)}">${slt(_dSt)}</span>
+                  <span class="badge ${sbl(_dSt)}" title="${_statusTooltip(p.id)}">${slt(_dSt)}</span>
                   ${isInfra&&tLbl[p.type]?`<span style="font-size:8px;padding:2px 6px;background:${tClr[p.type]}22;color:${tClr[p.type]};border-radius:3px;font-weight:700;letter-spacing:.07em">${tLbl[p.type]}</span>`:''}
                 </div>
               </div>
@@ -7356,6 +7455,8 @@ function scrollToPhase(dev,phase){
 // ============================================================
 function openProj(id){
   const p=Store.getProjects()[id]; if(!p)return;
+  // Clear WBS filters when switching to a different project
+  if(!S.proj||S.proj.id!==id) S.wbsFilters={q:'',sf:'',pf:'',af:''};
   S.proj=p;
   // Phase 4: persist last-opened project so page refresh restores context
   try{localStorage.setItem('_cky_last_proj',id);}catch(e){}
@@ -7377,6 +7478,7 @@ function renderDetHdr(){
   $('dhMeta').textContent='';
   const b=$('dhBadge');
   b.textContent=slt(p.status);b.className='badge '+sbl(p.status);
+  b.title=_statusTooltip(p.id);
 }
 
 function renderDetStats(){
@@ -7458,6 +7560,49 @@ function renderDetStats(){
         <div class="prog" style="height:10px;margin:0;border-radius:5px"><div class="prog-fill" style="width:${pct}%;border-radius:5px;background:${pct>=80?'var(--success)':pct>=40?'var(--warning)':'var(--accent)'}"></div></div>
       </div>
     </div>`;
+}
+
+// ── Audit Log ────────────────────────────────────────────────────────────────
+async function openAuditLog(){
+  openMod('auditLogMod');
+  const body=$('auditLogBody');
+  if(!body)return;
+  body.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading…</div>';
+  if(!CKY_API){body.innerHTML='<div style="padding:20px;color:var(--text-muted);font-size:12px">Audit log requires server mode.</div>';return;}
+  try{
+    const res=await fetch(CKY_API+'/api/audit',{headers:{'Authorization':'Bearer '+_getToken()}});
+    if(!res.ok){body.innerHTML=`<div style="padding:20px;color:var(--danger);font-size:12px">Error: ${res.status}</div>`;return;}
+    const rows=await res.json();
+    if(!rows.length){body.innerHTML='<div style="padding:20px;color:var(--text-muted);font-size:12px">No audit entries yet.</div>';return;}
+    const actionIco={create:'✚',edit:'✎',delete:'🗑',reschedule:'⇄','copy-tasks':'⧉'};
+    const actionClr={create:'#4a7c59',edit:'#8b6f47',delete:'#b83733',reschedule:'#3a5f8b','copy-tasks':'#6b4a8b'};
+    body.innerHTML=`
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="position:sticky;top:0;background:var(--surface2);z-index:2">
+            <th style="padding:8px 10px;text-align:left;font-weight:700;color:var(--text-muted);border-bottom:2px solid var(--border);white-space:nowrap">When</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:700;color:var(--text-muted);border-bottom:2px solid var(--border)">Who</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:700;color:var(--text-muted);border-bottom:2px solid var(--border)">Action</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:700;color:var(--text-muted);border-bottom:2px solid var(--border)">What</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,i)=>{
+            const dt=new Date(r.ts.replace(' ','T')+'Z');
+            const dateStr=dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+            const timeStr=dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+            const ico=actionIco[r.action]||'·';
+            const clr=actionClr[r.action]||'var(--text-muted)';
+            return`<tr style="border-bottom:1px solid var(--border);${i%2===0?'background:var(--surface)':'background:var(--surface2)'}">
+              <td style="padding:7px 10px;color:var(--text-muted);white-space:nowrap">${dateStr} ${timeStr}</td>
+              <td style="padding:7px 10px;font-weight:600;color:var(--text)">${escHtml(r.user_name||r.user_id)}</td>
+              <td style="padding:7px 10px;white-space:nowrap"><span style="color:${clr};font-weight:700">${ico} ${escHtml(r.action)}</span> <span style="color:var(--text-light);font-size:10px">${escHtml(r.entity_type)}</span></td>
+              <td style="padding:7px 10px;color:var(--text)">${escHtml(r.entity_name||r.entity_id)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }catch(e){body.innerHTML=`<div style="padding:20px;color:var(--danger);font-size:12px">Failed to load audit log: ${e.message}</div>`;}
 }
 
 // ── Development & Phase Management ──────────────────────────────────────────
@@ -7600,12 +7745,19 @@ function getFiltered(){
 
 function populateFilters(){
   if(!S.proj)return;
+  // Save current filter selections before rebuilding dropdowns
+  S.wbsFilters={q:fv('wsrch'),sf:fv('wsf'),pf:fv('wpf'),af:fv('waf')};
   const ts=Store.getTasksByProject(S.proj.id);
   const phases=[...new Set(ts.map(t=>t.phaseId))];
   $('wpf').innerHTML='<option value="">All Phases</option>'+phases.map(pid=>{const p=PH_BY_ID[pid];return`<option value="${pid}">${p?p.name:pid}</option>`;}).join('');
   const ass=[...new Set(ts.map(t=>t.assignee).filter(Boolean))].sort();
   $('waf').innerHTML='<option value="">All Assignees</option>'+ass.map(a=>`<option value="${a}">${a}</option>`).join('');
   const dl=$('alist');if(dl)dl.innerHTML=ass.map(a=>`<option value="${a}">`).join('');
+  // Restore saved filter values
+  if(S.wbsFilters.pf)$('wpf').value=S.wbsFilters.pf;
+  if(S.wbsFilters.af)$('waf').value=S.wbsFilters.af;
+  if(S.wbsFilters.q)$('wsrch').value=S.wbsFilters.q;
+  if(S.wbsFilters.sf)$('wsf').value=S.wbsFilters.sf;
 }
 
 function renderWBS(){
@@ -7824,24 +7976,37 @@ function dupById(id){
   renderWBS();toast('Task duplicated','success');
 }
 function delTask(id){
-  if(!confirm('Delete this task?'))return;
   if(!S.proj)return;
-  const rs=TaskService.deleteTask(S.proj.id,id);
+  const ts=Store.getTasksByProject(S.proj.id);
+  const idx=ts.findIndex(t=>t.id===id);
+  const task=ts[idx];if(!task)return;
+  const pid=S.proj.id;
+  const rs=TaskService.deleteTask(pid,id);
   if(!rs.ok){if(rs.error)toast(rs.error,'error');return;}
-  renderWBS();renderDetStats();renderStats();toast('Task deleted');
+  renderWBS();renderDetStats();renderStats();
+  _logAudit('delete','task',id,task.name);
+  toast('Task deleted','',6000,{label:'Undo',fn:()=>{
+    const cur=Store.getTasksByProject(pid);
+    cur.splice(Math.min(idx,cur.length),0,task);
+    Store.saveProjectTasks(pid,cur);Store.flush();
+    renderWBS();renderDetStats();renderStats();
+    toast('Task restored','success');
+  }});
 }
 function delPhaseGroup(phId){
   if(!S.proj)return;
   const ts=Store.getTasksByProject(S.proj.id);
   const members=ts.filter(t=>t.phaseId===phId||t.subphaseId===phId);
-  const msg=members.length
-    ?`Delete task group and its ${members.length} subtask${members.length>1?'s':''}?`
-    :'Delete this empty task group?';
-  if(!confirm(msg))return;
+  const savedTs=[...ts.map(t=>({...t}))]; // snapshot for undo
   const remaining=ts.filter(t=>t.phaseId!==phId&&t.subphaseId!==phId);
-  Store.saveProjectTasks(S.proj.id,remaining);
-  Store.flush();
-  renderWBS();renderDetStats();renderStats();toast('Task group deleted');
+  Store.saveProjectTasks(S.proj.id,remaining);Store.flush();
+  renderWBS();renderDetStats();renderStats();
+  const pid=S.proj.id;
+  toast(`Group deleted (${members.length} task${members.length!==1?'s':''})`, '', 6000, {label:'Undo', fn:()=>{
+    Store.saveProjectTasks(pid,savedTs);Store.flush();
+    renderWBS();renderDetStats();renderStats();
+    toast('Group restored','success');
+  }});
 }
 
 // ============================================================
@@ -8064,6 +8229,58 @@ function openAddProj(){
   $('pm-start').value='';$('pm-end').value='';
   openMod('projMod');
 }
+function openCopyTasksMod(){
+  if(!S.proj)return;
+  const projs=Store.getProjects();
+  const currentDev=S.proj.dev||'Amanvana';
+  const sel=$('copySourcePid');
+  sel.innerHTML='<option value="">— select a villa —</option>'+
+    Object.values(projs)
+      .filter(p=>p.id!==S.proj.id&&(p.dev||'Amanvana')===currentDev)
+      .sort((a,b)=>a.name.localeCompare(b.name))
+      .map(p=>{
+        const tCount=(Store.getTasksByProject(p.id)||[]).filter(t=>!t.isGroupHeader).length;
+        return`<option value="${p.id}">${p.name} (${tCount} tasks)</option>`;
+      }).join('');
+  $('copyTarget').textContent=S.proj.name;
+  $('copySourceInfo').textContent='';
+  sel.onchange=()=>{
+    const pid=sel.value;if(!pid){$('copySourceInfo').textContent='';return;}
+    const ts=(Store.getTasksByProject(pid)||[]).filter(t=>!t.isGroupHeader);
+    $('copySourceInfo').textContent=`${ts.length} task${ts.length!==1?'s':''} will be copied — dates preserved, status reset to Not Started`;
+  };
+  openMod('copyTasksMod');
+}
+function copyVillaTasks(){
+  const sourcePid=$('copySourcePid').value;
+  if(!sourcePid)return toast('Please select a source villa','error');
+  if(!S.proj)return;
+  const targetPid=S.proj.id;
+  const sourceTasks=Store.getTasksByProject(sourcePid);
+  if(!sourceTasks.length)return toast('Source villa has no tasks','error');
+  // Deep clone with new IDs; reset progress/status/actual dates; remap predecessors
+  const idMap={};
+  const cloned=sourceTasks.map(t=>{
+    const newId='T'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    idMap[t.id]=newId;
+    return{...t,id:newId,status:'not-started',progress:0,actualStartDate:'',actualEndDate:'',notes:''};
+  });
+  // Remap predecessor IDs to new IDs
+  cloned.forEach(t=>{
+    if(t.predecessors)t.predecessors=t.predecessors.map(p=>idMap[p]||p).filter(Boolean);
+  });
+  const existing=Store.getTasksByProject(targetPid);
+  const snapshot=[...existing.map(t=>({...t}))]; // snapshot for undo
+  Store.saveProjectTasks(targetPid,cloned);Store.flush();
+  closeMod('copyTasksMod');
+  renderWBS();renderDetStats();syncProjStatus(targetPid);
+  _logAudit('copy-tasks','project',targetPid,S.proj.name);
+  toast(`${cloned.length} tasks copied from ${Store.getProjects()[sourcePid]?.name||sourcePid}`,'success',6000,{label:'Undo',fn:()=>{
+    Store.saveProjectTasks(targetPid,snapshot);Store.flush();
+    renderWBS();renderDetStats();
+    toast('Reverted to original tasks','success');
+  }});
+}
 function openEditProj(){
   const p=S.proj;if(!p)return;
   $('pmTitle').textContent='Edit Villa Project';$('pmEId').value=p.id;
@@ -8075,16 +8292,18 @@ function openEditProj(){
   openMod('projMod');
 }
 function saveProj(){
-  const name=$('pm-name').value.trim();if(!name)return toast('Name required','error');
+  const name=$('pm-name').value.trim();if(!name){_fieldErr('pm-name');return toast('Villa name is required','error');}
+  const start=$('pm-start').value;const end=$('pm-end').value;
+  if(start&&end&&end<start){_fieldErr('pm-end');return toast('End date cannot be before start date','error');}
   const projs=Store.getProjects();const eid=$('pmEId').value;
   const id=eid||'P'+String(Date.now()).slice(-6);
-  const start=$('pm-start').value;
   const devVal=($('pm-dev')?.value||'').trim()||'Amanvana';
   projs[id]={id,name,code:$('pm-code').value||id,status:$('pm-status').value,type:$('pm-type').value,dev:devVal,phase:($('pm-phase').value||'').trim()||'Phase 1',start,end:$('pm-end').value,pm:$('pm-pm').value,ss:$('pm-ss').value,budget:Number($('pm-budget').value)||0,area:Number($('pm-area').value)||0,notes:$('pm-notes').value};
   Store.saveProjects(projs);
   closeMod('projMod');
   if(!eid)openProj(id);else{S.proj=projs[id];renderDetHdr();renderDetStats();}
   _refreshViews({sb:true});
+  _logAudit(eid?'edit':'create','project',id,name);
   if(eid){toast('Project updated','success');}else{setTimeout(function(){toast('Villa created. Use Import to add tasks.','success',5000);},400);}
   renderStats();
 }
@@ -8345,12 +8564,19 @@ function tmUpdateDur(){
 //  TASK EDIT MODAL - STATUS ↔ PROGRESS SYNC & VALIDATION
 // ============================================================
 function _tmValidate(){
-  // Validates at save time only - does not affect save button state.
-  const st=$('tm-status').value;
-  if(st==='on-hold'||st==='blocked') return {ok:true,msg:''};
   const sd=$('tm-start').value;const ed=$('tm-end').value;
-  if(sd&&ed&&ed<sd) return {ok:false,msg:'End date cannot be before start date'};
+  const st=$('tm-status').value;
+  if(sd&&ed&&ed<sd) return {ok:false,msg:'End date cannot be before start date',field:'tm-end'};
+  const prog=Number($('tm-progress').value);
+  if(!isNaN(prog)&&(prog<0||prog>100)) return {ok:false,msg:'Progress must be 0 – 100',field:'tm-progress'};
   return {ok:true,msg:''};
+}
+function _fieldErr(id){
+  const el=$(id);if(!el)return;
+  el.classList.add('inp-error');
+  const rm=()=>{el.classList.remove('inp-error');el.removeEventListener('input',rm);el.removeEventListener('change',rm);};
+  el.addEventListener('input',rm);el.addEventListener('change',rm);
+  setTimeout(rm,4000);
 }
 function validateProg(el){
   // legacy wrapper - called from oninput elsewhere; replaced by syncProgressToStatus
@@ -8915,8 +9141,8 @@ function updateTask(pid,taskId,changes){
   return TaskService.updateTask(pid,taskId,changes);
 }
 function saveTask(){
-  const name=$('tm-name').value.trim();if(!name)return toast('Task name is required','error');
-  const _vr=_tmValidate();if(!_vr.ok)return toast(_vr.msg,'error');
+  const name=$('tm-name').value.trim();if(!name){_fieldErr('tm-name');return toast('Task name is required','error');}
+  const _vr=_tmValidate();if(!_vr.ok){if(_vr.field)_fieldErr(_vr.field);return toast(_vr.msg,'error');}
   if(!S.proj)return;
   const form={
     editId:$('tmEId').value,
@@ -8951,7 +9177,9 @@ function saveTask(){
       Store.saveProjectTasks(S.proj.id,allTs);
     }
   }catch(e){console.warn('[CKY] _recalcGroupDates in saveTask failed:',e);}
-  syncProjStatus(S.proj.id);closeMod('taskMod');renderWBS();renderDetStats();_refreshViews();toast(rs.isEdit?'Task updated':'Task added','success');
+  syncProjStatus(S.proj.id);closeMod('taskMod');renderWBS();renderDetStats();_refreshViews();
+  _logAudit(rs.isEdit?'edit':'create','task',rs.id||form.editId||'',name);
+  toast(rs.isEdit?'Task updated':'Task added','success');
   _showSavedAt();
 }
 function _showSavedAt(){
@@ -9145,7 +9373,8 @@ function renderGantt(){
           rowContent+=`<div style="position:absolute;top:9px;left:${mx}px;width:14px;height:14px;transform:rotate(45deg);background:${(showCP&&isCrit)?'#c04040':clr};z-index:4;cursor:pointer;box-shadow:${milOutline};opacity:${isDimmed?0.3:1}" title="${t.name} | ${t.startDate}" onclick="ganttClickTask('${t.id}')"></div>`;
         } else {
           const barOutline=isSelected?'0 0 0 2.5px var(--accent),0 2px 6px rgba(0,0,0,.15)':isPred?'0 0 0 2px #c9a84c':isSucc?'0 0 0 2px #4a7c59':isParallel?'0 0 0 1.5px #3a5f8b':'0 1px 3px rgba(0,0,0,.2)';
-          rowContent+=`<div style="position:absolute;top:7px;height:16px;left:${x}px;width:${w}px;border-radius:3px;background:${barClr};cursor:pointer;display:flex;align-items:center;overflow:hidden;z-index:4;box-shadow:${barOutline};opacity:${isDimmed?0.3:1};${isOv?'outline:2px solid #c04040;':''}" title="${t.name} | ${t.assignee||''} | ${t.startDate}→${t.endDate} | ${t.progress||0}%" onclick="ganttClickTask('${t.id}')">
+          const gsDayStr=gS.toISOString().split('T')[0];
+          rowContent+=`<div draggable="${CAN.edit?'true':'false'}" data-tid="${t.id}" data-bx="${x}" data-cw="${cw}" data-gs="${gsDayStr}" ondragstart="ganttBarDragStart(event,this)" ondragend="S.ganttDrag=null" style="position:absolute;top:7px;height:16px;left:${x}px;width:${w}px;border-radius:3px;background:${barClr};cursor:${CAN.edit?'grab':'pointer'};display:flex;align-items:center;overflow:hidden;z-index:4;box-shadow:${barOutline};opacity:${isDimmed?0.3:1};${isOv?'outline:2px solid #c04040;':''}" title="${t.name} | ${t.assignee||''} | ${t.startDate}→${t.endDate} | ${t.progress||0}%${CAN.edit?' · drag to reschedule':''}" onclick="ganttClickTask('${t.id}')">
             <div style="position:absolute;left:0;top:0;bottom:0;width:${progW}px;background:rgba(0,0,0,.22);border-radius:3px 0 0 3px"></div>
             ${w>55?`<span style="position:relative;z-index:1;padding:0 5px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</span>`:''}
           </div>`;
@@ -9254,7 +9483,7 @@ function renderGantt(){
     </div>
     <div style="flex:1;min-width:0">
       <div style="background:var(--surface2);position:sticky;top:0;z-index:20;height:${hdrH}px;overflow:hidden">${hdrTopRow}${hdrBotRow}</div>
-      <div style="position:relative;height:${rows*rH}px;width:${totW}px">${barsH}${svgDeps}</div>
+      <div style="position:relative;height:${rows*rH}px;width:${totW}px" ondragover="event.preventDefault()" ondrop="ganttBarDrop(event)">${barsH}${svgDeps}</div>
     </div>
   </div>`;
 
@@ -9290,6 +9519,109 @@ function gotoToday(){
   const d=Math.max(0,dBetween(S.gStart.toISOString().split('T')[0],new Date().toISOString().split('T')[0]));
   el.scrollLeft=Math.max(0,d*cw-80);
 }
+
+// ── Print Gantt ────────────────────────────────────────────────────────────
+// Opens a styled print window with the current Gantt chart HTML.
+function printGantt(){
+  if(!S.proj)return toast('Open a villa project first','error');
+  const gc=$('gContent');
+  if(!gc||!gc.innerHTML||gc.querySelector('.empty-st'))
+    return toast('Switch to Gantt tab and ensure tasks are loaded','error');
+  const projName=S.proj.name||'Villa';
+  const printDate=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  // Grab all stylesheet text from <style> tags in this page
+  const styleText=Array.from(document.querySelectorAll('style')).map(s=>s.textContent).join('\n');
+  const win=window.open('','_blank','width=1200,height=800');
+  if(!win){toast('Pop-up blocked — please allow pop-ups for this site','error',5000);return;}
+  win.document.open();
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>Gantt — ${projName}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      ${styleText}
+      * { box-sizing: border-box; }
+      body { font-family: 'DM Sans', sans-serif; background: #fff; margin: 0; padding: 0; }
+      .print-hdr { padding: 12px 20px 10px; border-bottom: 2px solid #d5c9b8; margin-bottom: 4px; display: flex; align-items: baseline; gap: 16px; }
+      .print-hdr h1 { font-size: 15px; font-weight: 700; color: #3d2b1a; margin: 0; }
+      .print-hdr span { font-size: 10px; color: #8a7a68; }
+      .no-print { display: none !important; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-hdr { page-break-after: avoid; }
+      }
+    </style>
+  </head><body>
+    <div class="print-hdr">
+      <h1>${projName} — Gantt Chart</h1>
+      <span>Printed ${printDate}</span>
+    </div>
+    <div style="overflow:auto;padding:0 8px 16px">${gc.innerHTML}</div>
+    <script>
+      document.fonts.ready.then(()=>{ window.focus(); window.print(); });
+    </script>
+  </body></html>`);
+  win.document.close();
+}
+
+// ── Gantt drag-to-reschedule ───────────────────────────────────────────────
+// Planners (edit/manage permission) can drag a task bar left/right to shift
+// its start and end dates while preserving duration.
+function ganttBarDragStart(e, el){
+  if(!CAN.edit){e.preventDefault();return;}
+  const tid=el.dataset.tid;
+  const barX=parseInt(el.dataset.bx)||0;
+  const rect=el.getBoundingClientRect();
+  const offsetWithinBar=Math.max(0,e.clientX-rect.left);
+  S.ganttDrag={tid,barX,offsetWithinBar,cw:parseInt(el.dataset.cw)||18,gs:el.dataset.gs};
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',tid);
+}
+function ganttBarDrop(e){
+  e.preventDefault();
+  if(!S.ganttDrag||!CAN.edit){S.ganttDrag=null;return;}
+  const{tid,offsetWithinBar,cw,gs}=S.ganttDrag;
+  S.ganttDrag=null;
+  const container=e.currentTarget;
+  const rect=container.getBoundingClientRect();
+  // e.clientX - rect.left gives position within the bars container (rect accounts for scroll)
+  const dropX=e.clientX-rect.left;
+  const barStartX=dropX-offsetWithinBar;
+  const dayOffset=Math.round(barStartX/cw);
+  // Compute new dates
+  const gsDate=new Date(gs+'T00:00:00');
+  const newStart=new Date(gsDate);
+  newStart.setDate(newStart.getDate()+dayOffset);
+  const newStartStr=newStart.toISOString().split('T')[0];
+  // Get task and compute duration
+  const ts=Store.getTasksByProject(S.proj.id);
+  const task=ts.find(t=>t.id===tid);
+  if(!task)return;
+  const oldStart=task.startDate?new Date(task.startDate+'T00:00:00'):newStart;
+  const oldEnd=task.endDate?new Date(task.endDate+'T00:00:00'):new Date(oldStart);oldEnd.setDate(oldEnd.getDate()+1);
+  const duration=Math.max(0,Math.round((oldEnd-oldStart)/86400000));
+  const newEnd=new Date(newStart);
+  newEnd.setDate(newEnd.getDate()+duration);
+  const newEndStr=newEnd.toISOString().split('T')[0];
+  // Don't save if nothing changed
+  if(newStartStr===task.startDate&&newEndStr===task.endDate)return;
+  const oldStartStr=task.startDate||'';const oldEndStr=task.endDate||'';
+  task.startDate=newStartStr;task.endDate=newEndStr;
+  Store.saveProjectTasks(S.proj.id,ts);Store.flush();
+  renderGantt();renderDetStats();syncProjStatus(S.proj.id);
+  _logAudit('reschedule','task',tid,task.name);
+  toast(`${task.name}: ${oldStartStr}→${newStartStr}`,'success',5000,{label:'Undo',fn:()=>{
+    const ts2=Store.getTasksByProject(S.proj.id);
+    const t2=ts2.find(t=>t.id===tid);
+    if(!t2)return;
+    t2.startDate=oldStartStr;t2.endDate=oldEndStr;
+    Store.saveProjectTasks(S.proj.id,ts2);Store.flush();
+    renderGantt();renderDetStats();
+    toast('Rescheduling undone','success');
+  }});
+}
+
 // ── Auto-wire sequential dependencies within each subphase (non-destructive)
 // DEPRECATED: No longer called at render time. Left in place
 // as a utility for one-time import wiring only. Do not call from render paths.
@@ -13450,6 +13782,9 @@ function _applyPermissions(){
   // Select screen Add Development button
   const addDevBtn=document.querySelector('button[onclick="devMgmtAddDev()"]');
   if(addDevBtn)addDevBtn.style.display=CAN.manage?'':'none';
+  // Audit log button (manage only)
+  const auditBtn=$('auditLogBtn');
+  if(auditBtn)auditBtn.style.display=CAN.manage?'':'none';
   // Task side-panel action buttons (Edit, Copy, Status, Delete)
   const tpacts=document.querySelector('.tpacts');
   if(tpacts)tpacts.style.display=CAN.edit?'':'none';
@@ -13654,7 +13989,8 @@ function _renderExtraDevCards(projs, tasksAll){
       <div>
         <div style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:600;color:#f5f0e8;margin-bottom:3px">${dev}</div>
         ${isEmpty
-          ?`<div style="font-size:11px;color:#8a7a68">Empty — open to import data</div>`
+          ?`<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.65);margin-bottom:2px">No villas yet</div>
+            <div style="font-size:10px;color:#8a7a68">Use Import or Add Villa to get started</div>`
           :`<div style="font-size:11px;color:#8a7a68">${dvVillas.length} unit${dvVillas.length!==1?'s':''} · ${pct}% progress</div>`}
       </div>
       <div style="font-size:12px;color:#8a7a68;font-weight:600;letter-spacing:.03em">Open →</div>
