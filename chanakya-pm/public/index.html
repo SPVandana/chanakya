@@ -255,6 +255,13 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .toast-box{position:fixed;bottom:16px;right:16px;z-index:900;display:flex;flex-direction:column;gap:5px}
 .toast{background:var(--text);color:#fff;padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;box-shadow:var(--shadow-lg);animation:tin .2s ease}
 .toast.success{background:var(--success)}.toast.error{background:var(--danger)}.toast.warning{background:var(--warning)}
+.save-banner{position:fixed;top:0;left:0;right:0;z-index:1000;padding:10px 18px;font-size:13px;font-weight:600;text-align:center;color:#fff;background:var(--warning,#d08a2c);box-shadow:0 2px 8px rgba(0,0,0,.15);display:none;font-family:inherit}
+.save-banner.visible{display:block}
+.save-banner.critical{background:var(--danger,#c04040)}
+.save-banner .sb-action{margin-left:12px;padding:4px 10px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
+.save-banner .sb-action:hover{background:rgba(255,255,255,.35)}
+.save-block-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.08);display:none;cursor:not-allowed}
+.save-block-overlay.visible{display:block}
 @keyframes tin{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:600;min-width:170px;padding:4px;display:none}
@@ -1467,6 +1474,8 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 </div>
 
 <div class="toast-box" id="toastBox"></div>
+<div class="save-banner" id="saveBanner" role="alert" aria-live="polite"></div>
+<div class="save-block-overlay" id="saveBlockOverlay" title="Editing is paused — save hasn't succeeded in 30+ seconds"></div>
 
 <!-- ═══════════════════════════════════════════════════════
      BASELINE: CREATE MODAL
@@ -1920,18 +1929,87 @@ const Store={
   flush(){ DB.save(); },
 };
 
+// ── Auto-save reliability ─────────────────────────────────────────────────
+// Tracks save health so we can surface failures to the user instead of silently
+// losing writes. States: idle | saving | offline (transient) | blocked (≥30s down).
+const _saveState={mode:'idle',failSince:0,retryTimer:null,lastOk:0};
+
+function _showSaveBanner(mode){
+  const b=document.getElementById('saveBanner');
+  const o=document.getElementById('saveBlockOverlay');
+  if(!b||!o)return;
+  if(mode==='offline'){
+    b.className='save-banner visible';
+    b.innerHTML='Your changes aren\u2019t syncing to the server. Retrying\u2026 <button class="sb-action" type="button" onclick="_saveNow()">Retry now</button>';
+    o.className='save-block-overlay';
+  }else if(mode==='blocked'){
+    b.className='save-banner visible critical';
+    b.innerHTML='Saves have been failing for 30+ seconds. <strong>Stop editing</strong> \u2014 your changes will be lost on reload. <button class="sb-action" type="button" onclick="_saveNow()">Retry</button> <button class="sb-action" type="button" onclick="location.reload()">Reload</button>';
+    o.className='save-block-overlay visible';
+  }else if(mode==='conflict'){
+    b.className='save-banner visible critical';
+    b.innerHTML='Another user saved changes after you last loaded. Reload to see them before continuing. <button class="sb-action" type="button" onclick="location.reload()">Reload now</button>';
+    o.className='save-block-overlay visible';
+  }else{
+    b.className='save-banner';
+    b.innerHTML='';
+    o.className='save-block-overlay';
+  }
+}
+
+function _onSaveSuccess(resp){
+  _saveState.mode='idle';
+  _saveState.failSince=0;
+  _saveState.lastOk=Date.now();
+  if(resp&&resp.updated_at)_C._serverUpdatedAt=resp.updated_at;
+  _showSaveBanner('idle');
+}
+
+function _onSaveFailure(err){
+  const now=Date.now();
+  if(!_saveState.failSince)_saveState.failSince=now;
+  const down=now-_saveState.failSince;
+  _saveState.mode=down>=30000?'blocked':'offline';
+  _showSaveBanner(_saveState.mode);
+  console.warn('[CKY] Save failed (down '+Math.round(down/1000)+'s):',err&&err.message);
+  clearTimeout(_saveState.retryTimer);
+  _saveState.retryTimer=setTimeout(_saveNow,5000);
+}
+
+function _buildSavePayload(){
+  const payload={projs:_C.projs,resources:_C.resources,meta:_C.meta,tasks:_C.tasks};
+  if(typeof _blStore!=='undefined') payload.baselines=_blStore;
+  if(typeof _PT!=='undefined') payload.planner=_PT;
+  if(_C._serverUpdatedAt) payload._updated_at=_C._serverUpdatedAt;
+  return payload;
+}
+
+function _saveNow(){
+  if(!_serverOK||!CKY_API)return;
+  clearTimeout(_saveTimer);
+  clearTimeout(_saveState.retryTimer);
+  const payload=_buildSavePayload();
+  fetch(CKY_API+'/api/backup',{method:'PUT',headers:_authHdr(),body:JSON.stringify(payload)})
+    .then(r=>{
+      if(r.status===401){ _clearToken(); doLogout(); return; }
+      if(r.status===409){
+        // Someone else wrote while we were editing — block further edits
+        // until the user reloads so we don't overwrite their changes.
+        r.json().then(j=>{ if(j&&j.currentUpdatedAt)_C._serverUpdatedAt=j.currentUpdatedAt; }).catch(()=>{});
+        _saveState.mode='blocked';
+        _showSaveBanner('conflict');
+        return;
+      }
+      if(!r.ok){ _onSaveFailure(new Error('HTTP '+r.status)); return; }
+      return r.json().then(_onSaveSuccess).catch(()=>_onSaveSuccess(null));
+    })
+    .catch(_onSaveFailure);
+}
+
 function _scheduleSave(){
   if(!_serverOK||!CKY_API)return;
   clearTimeout(_saveTimer);
-  _saveTimer=setTimeout(()=>{
-    // Phase 1 fix: include baselines + planner in server backup
-    const payload={projs:_C.projs,resources:_C.resources,meta:_C.meta,tasks:_C.tasks};
-    if(typeof _blStore!=='undefined') payload.baselines=_blStore;
-    if(typeof _PT!=='undefined') payload.planner=_PT;
-    fetch(CKY_API+'/api/backup',{method:'PUT',headers:_authHdr(),
-      body:JSON.stringify(payload)
-    }).then(r=>{ if(r.status===401){ _clearToken(); doLogout(); } }).catch(e=>console.warn('[CKY] Save:',e.message));
-  },1500);
+  _saveTimer=setTimeout(_saveNow,1500);
 }
 
 /**
@@ -2057,6 +2135,9 @@ async function _loadFromServer(){
     clearTimeout(dataTimer);
     if(!r.ok){ console.warn('[CKY] /api/data returned',r.status); return false; }
     const d=await r.json();
+    // Stash the server's updated_at so subsequent PUT /api/backup can detect
+    // conflicts via optimistic locking (server returns 409 on mismatch).
+    if(d.updated_at) _C._serverUpdatedAt=d.updated_at;
     Object.assign(_C.projs,d.projs||{});
     // Re-derive contractorName from contractor code for any server project missing it
     Object.keys(_C.projs).forEach(pid=>{
@@ -9196,7 +9277,17 @@ function _showSavedAt(){
 // ============================================================
 //  GANTT CHART
 // ============================================================
+// Coalesce rapid renderGantt() calls into a single rAF-scheduled render.
+// Many call sites chain renderGantt() with renderDetStats() + syncProjStatus()
+// after mutations; without this, a single user action can trigger the full
+// chart rebuild 3–5× in one tick. rAF guarantees one paint per frame.
+let _ganttRenderPending=false;
 function renderGantt(){
+  if(_ganttRenderPending)return;
+  _ganttRenderPending=true;
+  requestAnimationFrame(()=>{ _ganttRenderPending=false; _renderGanttNow(); });
+}
+function _renderGanttNow(){
   if(!S.proj)return;
   const p=S.proj;
   // Render reads stored tasks directly - no auto-wiring at render time.

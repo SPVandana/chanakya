@@ -6,7 +6,13 @@
 
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 16) {
+  console.error('\n  ✗ JWT_SECRET is missing or too short (<16 chars).');
+  console.error('    Set it in your environment (e.g. .env file or Render dashboard):');
+  console.error('      JWT_SECRET=$(openssl rand -hex 32)\n');
+  process.exit(1);
+}
 
 /**
  * requireAuth — Express middleware that enforces a valid JWT.

@@ -115,7 +115,7 @@ const stmts = {
   `),
 
   /** App data */
-  getAppData     : db.prepare('SELECT projs, resources, meta, tasks, baselines, planner FROM app_data WHERE id = 1'),
+  getAppData     : db.prepare('SELECT projs, resources, meta, tasks, baselines, planner, updated_at FROM app_data WHERE id = 1'),
   updateAppData  : db.prepare(`
     UPDATE app_data SET
       projs      = @projs,
@@ -148,15 +148,28 @@ function loadAppData() {
     tasks     : safe('tasks'),
     baselines : safe('baselines'),
     planner   : safe('planner'),
+    updated_at: row.updated_at,
   };
 }
 
 /**
- * saveAppData(data) — merges the supplied keys into the singleton row.
+ * saveAppData(data, expectedUpdatedAt) — merges the supplied keys into the singleton row.
  * Only the keys present in `data` are updated; omitted keys are preserved.
+ *
+ * If expectedUpdatedAt is provided and doesn't match the current DB value, throws
+ * a StaleStateError so the caller can return HTTP 409. This prevents concurrent
+ * editors from silently clobbering each other's writes on the singleton row.
  */
-function saveAppData(data) {
+function saveAppData(data, expectedUpdatedAt) {
   const existing = loadAppData();
+
+  if (expectedUpdatedAt && existing.updated_at && expectedUpdatedAt !== existing.updated_at) {
+    const err = new Error('Stale data — someone else saved more recent changes.');
+    err.code = 'STALE_STATE';
+    err.currentUpdatedAt = existing.updated_at;
+    throw err;
+  }
+
   const allowed  = ['projs', 'resources', 'meta', 'tasks', 'baselines', 'planner'];
 
   const merged = { ...existing };
@@ -175,7 +188,8 @@ function saveAppData(data) {
     planner   : JSON.stringify(merged.planner),
   });
 
-  return merged;
+  // Return freshly-read row so caller gets the post-write updated_at
+  return loadAppData();
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────

@@ -41,12 +41,20 @@ router.put('/backup', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid backup payload' });
   }
 
+  // Optimistic lock — client sends the updated_at it last read; if the DB has
+  // a newer value, reject with 409 so the client can re-sync before retrying.
+  const expectedUpdatedAt = typeof body._updated_at === 'string' ? body._updated_at : null;
+
   try {
-    // saveAppData merges only the known keys and stamps updated_at in SQLite
-    const merged = saveAppData(body);
-    const ts = new Date().toISOString();
-    res.json({ ok: true, ts });
+    const merged = saveAppData(body, expectedUpdatedAt);
+    res.json({ ok: true, ts: new Date().toISOString(), updated_at: merged.updated_at });
   } catch (e) {
+    if (e.code === 'STALE_STATE') {
+      return res.status(409).json({
+        error: 'Conflict: another user saved changes after your last sync. Reload to see the latest, then retry your edit.',
+        currentUpdatedAt: e.currentUpdatedAt,
+      });
+    }
     console.error('[PUT /api/backup]', e.message);
     res.status(500).json({ error: 'Could not write backup data' });
   }
