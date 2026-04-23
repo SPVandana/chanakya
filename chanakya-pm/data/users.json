@@ -52,7 +52,7 @@
     "email": "vandana.p@whitelotusgroup.in",
     "name": "Vandana P",
     "role": "Project Manager",
-    "permissions": "edit,approve,manage",
+    "permissions": "edit,manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
