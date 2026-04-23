@@ -24,6 +24,8 @@ services:
         sync: false                # Set in Render dashboard; blueprint won't overwrite it
       - key: ALLOWED_ORIGINS
         sync: false                # Set in Render dashboard if frontend is on a different origin
+      - key: AUTO_PROVISION_DOMAINS
+        value: whitelotusgroup.in  # Anyone from this domain can sign in via Google
     disk:
       name: chanakya-data
       mountPath: /data             # Persistent disk — SQLite DB survives every redeploy

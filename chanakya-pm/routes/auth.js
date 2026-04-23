@@ -116,12 +116,62 @@ router.post('/google', googleLimitByIp, async (req, res) => {
     return res.status(401).json({ error: 'Google account has no email address' });
   }
 
+  // Trust only verified Google email addresses — an unverified email means
+  // the user hasn't proven ownership, so they shouldn't get auto-provisioned.
+  const emailVerified = googleInfo.verified_email === true || googleInfo.verified_email === 'true';
+
   // Look up user in the SQLite users table
-  const user = stmts.getUserByEmail.get(googleEmail);
+  let user = stmts.getUserByEmail.get(googleEmail);
+
   if (!user) {
-    return res.status(403).json({
-      error: `No account found for ${googleEmail}. Contact your administrator.`,
-    });
+    // Auto-provision anyone signing in from a whitelisted domain.
+    // Default: whitelotusgroup.in. Override via AUTO_PROVISION_DOMAINS
+    // (comma-separated list) if you ever need more domains.
+    const allowedDomains = (process.env.AUTO_PROVISION_DOMAINS || 'whitelotusgroup.in')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const emailDomain = googleEmail.split('@')[1] || '';
+    const domainAllowed = allowedDomains.includes(emailDomain);
+
+    if (!domainAllowed) {
+      return res.status(403).json({
+        error: `No account found for ${googleEmail}. Contact your administrator.`,
+      });
+    }
+    if (!emailVerified) {
+      return res.status(403).json({ error: 'Google account email is not verified' });
+    }
+
+    // Create the account. Default permissions are 'edit' so new teammates can
+    // actually do work — admin can promote to manage/approve, or demote to
+    // view, by editing data/users.json and re-deploying (or directly in DB).
+    const displayName = (googleInfo.name || googleEmail.split('@')[0]).toString().slice(0, 120);
+    const newId = 'u-auto-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    try {
+      stmts.insertUser.run({
+        id           : newId,
+        email        : googleEmail,
+        name         : displayName,
+        role         : 'Project Manager',
+        permissions  : 'edit',
+        passwordHash : null, // Google-only account — no password login
+      });
+      // Best-effort audit entry so admins see who got auto-provisioned
+      try {
+        stmts.insertAudit.run({
+          userId     : newId,
+          userName   : displayName,
+          action     : 'create',
+          entityType : 'data',      // closest whitelisted entity type
+          entityId   : newId,
+          entityName : `Auto-provisioned from ${emailDomain}: ${googleEmail}`,
+        });
+      } catch (_){}
+      user = stmts.getUserByEmail.get(googleEmail);
+      console.log(`[auth/google] Auto-provisioned ${googleEmail} as ${newId} (edit)`);
+    } catch (e) {
+      console.error('[auth/google] Auto-provision failed:', e.message);
+      return res.status(500).json({ error: 'Could not create account — please contact your administrator' });
+    }
   }
 
   const token = signToken(user);
