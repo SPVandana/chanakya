@@ -13,15 +13,33 @@ const bcrypt         = require('bcryptjs');
 const fetch          = require('node-fetch');
 const { stmts }      = require('../db/db');
 const { signToken }  = require('../middleware/auth');
+const { createRateLimit } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
+// Two-layer rate limit on login to blunt brute-force without locking out real
+// users. IP-based catches attackers who spray many emails from one source;
+// email-based catches attackers who rotate IPs against one account.
+const loginLimitByIp    = createRateLimit({ windowMs: 15 * 60_000, max: 30, keyBy: 'ip',
+  message: 'Too many login attempts from this network. Try again in a few minutes.' });
+const loginLimitByEmail = createRateLimit({ windowMs: 15 * 60_000, max: 10, keyBy: 'email',
+  message: 'Too many failed attempts for this account. Try again in a few minutes.' });
+
+const googleLimitByIp   = createRateLimit({ windowMs: 15 * 60_000, max: 30, keyBy: 'ip',
+  message: 'Too many Google sign-in attempts. Try again in a few minutes.' });
+
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body || {};
+router.post('/login', loginLimitByIp, loginLimitByEmail, async (req, res) => {
+  const body = req.body || {};
+  const email    = typeof body.email === 'string'    ? body.email.trim().toLowerCase() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
+  }
+  // Reject absurdly large inputs as cheap DoS defense (bcrypt is expensive)
+  if (email.length > 254 || password.length > 200) {
+    return res.status(400).json({ error: 'Email or password exceeds allowed length' });
   }
 
   // Look up user by email (COLLATE NOCASE in schema handles case insensitivity)
@@ -51,11 +69,15 @@ router.post('/login', async (req, res) => {
 });
 
 // ─── POST /api/auth/google ────────────────────────────────────────────────────
-router.post('/google', async (req, res) => {
-  const { access_token } = req.body || {};
+router.post('/google', googleLimitByIp, async (req, res) => {
+  const body = req.body || {};
+  const access_token = typeof body.access_token === 'string' ? body.access_token : '';
 
   if (!access_token) {
     return res.status(400).json({ error: 'access_token is required' });
+  }
+  if (access_token.length > 4096) {
+    return res.status(400).json({ error: 'access_token is too long' });
   }
 
   // Verify the Google access token via Google's tokeninfo endpoint
@@ -76,8 +98,14 @@ router.post('/google', async (req, res) => {
     return res.status(502).json({ error: 'Could not reach Google auth service' });
   }
 
-  // Confirm the token was issued for our app
-  const expectedClientId = process.env.GOOGLE_CLIENT_ID || '638036945919-lvvqs9lovnq9vfcponoiqud4lvn3dtbm.apps.googleusercontent.com';
+  // Confirm the token was issued for our app. Must match the env-configured
+  // client ID exactly — no hardcoded fallback, which would allow Google login
+  // to silently succeed even on a misconfigured environment.
+  const expectedClientId = process.env.GOOGLE_CLIENT_ID;
+  if (!expectedClientId) {
+    console.error('[auth/google] GOOGLE_CLIENT_ID env var is not set — refusing login');
+    return res.status(503).json({ error: 'Google Sign-In is not configured on this server' });
+  }
   if (googleInfo.issued_to !== expectedClientId) {
     console.warn('[auth/google] token issued_to mismatch:', googleInfo.issued_to);
     return res.status(401).json({ error: 'Google token was not issued for this application' });

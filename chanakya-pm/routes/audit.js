@@ -11,26 +11,51 @@ const { stmts }      = require('../db/db');
 
 const router = express.Router();
 
+// Whitelists prevent a compromised client (or test code) from writing
+// arbitrary values into the audit log — keeps the log meaningful and
+// queryable. Extend these if you add a new action/entity type.
+const ALLOWED_ACTIONS = new Set([
+  'create', 'edit', 'delete', 'reschedule', 'copy-tasks',
+  'import', 'export', 'login', 'logout',
+  'approve', 'reject', 'restore', 'baseline-create', 'baseline-delete',
+]);
+const ALLOWED_ENTITY_TYPES = new Set([
+  'task', 'project', 'development', 'resource', 'baseline',
+  'approval', 'session', 'data',
+]);
+
 // ─── POST /api/audit ──────────────────────────────────────────────────────────
 // Body: { action, entityType, entityId, entityName }
 router.post('/', requireAuth, (req, res) => {
-  const { action, entityType, entityId, entityName } = req.body || {};
+  const body = req.body || {};
+  const action     = typeof body.action === 'string'     ? body.action.trim()     : '';
+  const entityType = typeof body.entityType === 'string' ? body.entityType.trim() : '';
+  const entityId   = typeof body.entityId === 'string'   ? body.entityId   : '';
+  const entityName = typeof body.entityName === 'string' ? body.entityName : '';
+
   if (!action || !entityType) {
     return res.status(400).json({ error: 'action and entityType are required' });
   }
+  if (!ALLOWED_ACTIONS.has(action)) {
+    return res.status(400).json({ error: `action must be one of: ${[...ALLOWED_ACTIONS].join(', ')}` });
+  }
+  if (!ALLOWED_ENTITY_TYPES.has(entityType)) {
+    return res.status(400).json({ error: `entityType must be one of: ${[...ALLOWED_ENTITY_TYPES].join(', ')}` });
+  }
+
   try {
     stmts.insertAudit.run({
       userId     : req.user.id   || '',
       userName   : req.user.name || req.user.email || '',
-      action     : String(action).slice(0, 64),
-      entityType : String(entityType).slice(0, 32),
-      entityId   : String(entityId   || '').slice(0, 64),
-      entityName : String(entityName || '').slice(0, 200),
+      action,
+      entityType,
+      entityId   : String(entityId).slice(0, 64),
+      entityName : String(entityName).slice(0, 200),
     });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (e) {
     console.error('[POST /api/audit]', e.message);
-    res.status(500).json({ error: 'Failed to record audit entry' });
+    return res.status(500).json({ error: 'Failed to record audit entry' });
   }
 });
 

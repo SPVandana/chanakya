@@ -1829,14 +1829,66 @@ PH.forEach(p=>{ PH_BY_ID[p.id]=p; PH_BY_NAME[p.name.toLowerCase()]=p; });
 // ── Tiny HTML escape helper ────────────────────────────────────────────────
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+// Save-boundary XSS filter. Strips HTML-looking tags, javascript:/data: URL
+// schemes, and inline event handlers from user-entered text. Preserves bare
+// `<` and `>` used for comparisons like "W < 100" because those don't match
+// the tag pattern (which requires a letter immediately after `<`).
+// Applied in the three modal save handlers (villa, task, resource) so no
+// attack payload can enter the shared data stream used by every team member.
+function _sanitizeUserText(s){
+  if(typeof s !== 'string') return s;
+  return s
+    .replace(/<\/?[a-zA-Z][\w\-]*[^>]*>/g, '')       // anything that looks like an HTML tag
+    .replace(/javascript\s*:/gi, '')                  // javascript: URL scheme
+    .replace(/data\s*:\s*text\/html/gi, '')           // data: HTML URLs
+    .replace(/\s+on[a-z]+\s*=\s*(['"][^'"]*['"]|\S+)/gi, ''); // on*=handler pairs
+}
+
 // ── API endpoint (auto-detected) ──────────────────────────────────────────
 const CKY_API = (()=>{const{protocol,origin}=window.location;return protocol!=='file:'?origin:null;})();
 let _serverOK = false;
 let _saveTimer = null;
 // ── JWT token helpers (backend auth) ──────────────────────────────────────
 const _getToken   = () => sessionStorage.getItem('_cky_token') || '';
-const _setToken   = t  => sessionStorage.setItem('_cky_token', t);
-const _clearToken = () => sessionStorage.removeItem('_cky_token');
+const _setToken   = t  => { sessionStorage.setItem('_cky_token', t); _scheduleExpiryWatch(); };
+const _clearToken = () => { sessionStorage.removeItem('_cky_token'); if(_expiryTimer) clearTimeout(_expiryTimer); if(_expiryWarnTimer) clearTimeout(_expiryWarnTimer); };
+
+// ── JWT expiry watcher ────────────────────────────────────────────────────
+// Decode the JWT payload (no verification — server does that) to find the
+// exp claim, then schedule:
+//   * a warning banner 15 minutes before expiry so the user can save and
+//     re-login before getting logged out mid-edit
+//   * a forced logout the moment the token expires so the next request
+//     doesn't silently 401
+let _expiryTimer=null, _expiryWarnTimer=null;
+function _decodeJwt(token){
+  try{
+    const payload = token.split('.')[1];
+    const json = atob(payload.replace(/-/g,'+').replace(/_/g,'/'));
+    return JSON.parse(json);
+  }catch(e){ return null; }
+}
+function _scheduleExpiryWatch(){
+  const token = _getToken(); if(!token) return;
+  if(_expiryTimer) clearTimeout(_expiryTimer);
+  if(_expiryWarnTimer) clearTimeout(_expiryWarnTimer);
+  const p = _decodeJwt(token); if(!p || !p.exp) return;
+  const expMs = p.exp * 1000;
+  const msUntilExp  = expMs - Date.now();
+  const msUntilWarn = msUntilExp - 15 * 60 * 1000;
+  if(msUntilWarn > 0){
+    _expiryWarnTimer = setTimeout(()=>{
+      toast('Your session expires in 15 minutes. Save your work and sign back in soon to avoid losing changes.','warning',15000);
+    }, msUntilWarn);
+  }
+  if(msUntilExp > 0){
+    _expiryTimer = setTimeout(()=>{
+      toast('Your session has expired. Please sign in again.','error',8000);
+      _clearToken();
+      if(typeof doLogout === 'function') doLogout();
+    }, msUntilExp + 1000); // +1s grace so clock skew doesn't fire early
+  }
+}
 
 // ── localStorage utilities ────────────────────────────────────────────────
 // Centralised wrappers so callers never write try/catch boilerplate and
@@ -6696,6 +6748,9 @@ function _clearGeneratedTasksFromNotStarted(){
 async function boot(){
   const loadEl=$('appLoading');
   if(loadEl)loadEl.style.display='flex';
+  // Arm the expiry watch for any token restored from a previous session,
+  // so reloading the page doesn't leave a silent expiry landmine.
+  _scheduleExpiryWatch();
   try{
     // Try server first — outer 5s safety net so a slow server never hangs the whole boot
     const connected=await Promise.race([
@@ -8375,13 +8430,13 @@ function openEditProj(){
   openMod('projMod');
 }
 function saveProj(){
-  const name=$('pm-name').value.trim();if(!name){_fieldErr('pm-name');return toast('Villa name is required','error');}
+  const name=_sanitizeUserText($('pm-name').value.trim());if(!name){_fieldErr('pm-name');return toast('Villa name is required','error');}
   const start=$('pm-start').value;const end=$('pm-end').value;
   if(start&&end&&end<start){_fieldErr('pm-end');return toast('End date cannot be before start date','error');}
   const projs=Store.getProjects();const eid=$('pmEId').value;
   const id=eid||'P'+String(Date.now()).slice(-6);
-  const devVal=($('pm-dev')?.value||'').trim()||'Amanvana';
-  projs[id]={id,name,code:$('pm-code').value||id,status:$('pm-status').value,type:$('pm-type').value,dev:devVal,phase:($('pm-phase').value||'').trim()||'Phase 1',start,end:$('pm-end').value,pm:$('pm-pm').value,ss:$('pm-ss').value,budget:Number($('pm-budget').value)||0,area:Number($('pm-area').value)||0,notes:$('pm-notes').value};
+  const devVal=_sanitizeUserText(($('pm-dev')?.value||'').trim())||'Amanvana';
+  projs[id]={id,name,code:_sanitizeUserText($('pm-code').value)||id,status:$('pm-status').value,type:$('pm-type').value,dev:devVal,phase:_sanitizeUserText(($('pm-phase').value||'').trim())||'Phase 1',start,end:$('pm-end').value,pm:_sanitizeUserText($('pm-pm').value),ss:_sanitizeUserText($('pm-ss').value),budget:Number($('pm-budget').value)||0,area:Number($('pm-area').value)||0,notes:_sanitizeUserText($('pm-notes').value)};
   Store.saveProjects(projs);
   closeMod('projMod');
   if(!eid)openProj(id);else{S.proj=projs[id];renderDetHdr();renderDetStats();}
@@ -9224,7 +9279,7 @@ function updateTask(pid,taskId,changes){
   return TaskService.updateTask(pid,taskId,changes);
 }
 function saveTask(){
-  const name=$('tm-name').value.trim();if(!name){_fieldErr('tm-name');return toast('Task name is required','error');}
+  const name=_sanitizeUserText($('tm-name').value.trim());if(!name){_fieldErr('tm-name');return toast('Task name is required','error');}
   const _vr=_tmValidate();if(!_vr.ok){if(_vr.field)_fieldErr(_vr.field);return toast(_vr.msg,'error');}
   if(!S.proj)return;
   const form={
@@ -9244,10 +9299,10 @@ function saveTask(){
     cost:$('tm-cost').value,
     milestone:($('tm-ms-check')?.checked?1:0),
     inspectionRequired:($('tm-inspection')?.checked?1:0),
-    blockReason:$('tm-block-reason')?.value||'',
-    blockDetails:$('tm-block-details')?.value||'',
+    blockReason:_sanitizeUserText($('tm-block-reason')?.value||''),
+    blockDetails:_sanitizeUserText($('tm-block-details')?.value||''),
     constraint:$('tm-constraint').value,
-    subphaseName:$('tm-subphase-name')?.value||'',
+    subphaseName:_sanitizeUserText($('tm-subphase-name')?.value||''),
   };
   const rs=TaskService.saveTaskFromModal(S.proj.id,form);
   if(!rs.ok){if(rs.error)toast(rs.error,'error');return;}
@@ -9792,7 +9847,7 @@ function renderRes(){
 
 function openAddRes(){$('rmTitle').textContent='Add Resource';$('rmEId').value='';['rm-name','rm-role','rm-email','rm-phone'].forEach(id=>$(id).value='');$('rm-rate').value=0;$('rm-avail').value=100;$('rm-type').value='work';openMod('resMod');}
 function openEditRes(id){const r=Store.getResources()[id];if(!r)return;$('rmTitle').textContent='Edit Resource';$('rmEId').value=id;$('rm-name').value=r.name;$('rm-role').value=r.role||'';$('rm-email').value=r.email||'';$('rm-phone').value=r.phone||'';$('rm-rate').value=r.rate||0;$('rm-avail').value=r.avail||100;$('rm-type').value=r.type||'work';openMod('resMod');}
-function saveRes(){const name=$('rm-name').value.trim();if(!name)return renderStats();toast('Name required','error');const res=Store.getResources();const eid=$('rmEId').value;const id=eid||'R'+String(Date.now()).slice(-5);res[id]={id,name,role:$('rm-role').value,email:$('rm-email').value,phone:$('rm-phone').value,rate:Number($('rm-rate').value)||0,avail:Number($('rm-avail').value)||100,type:$('rm-type').value,color:aClr(name)};Store.saveResources(res);closeMod('resMod');renderRes();toast('Resource saved','success');}
+function saveRes(){const name=_sanitizeUserText($('rm-name').value.trim());if(!name){toast('Name required','error');return;}const res=Store.getResources();const eid=$('rmEId').value;const id=eid||'R'+String(Date.now()).slice(-5);res[id]={id,name,role:_sanitizeUserText($('rm-role').value),email:_sanitizeUserText($('rm-email').value),phone:_sanitizeUserText($('rm-phone').value),rate:Number($('rm-rate').value)||0,avail:Number($('rm-avail').value)||100,type:$('rm-type').value,color:aClr(name)};Store.saveResources(res);closeMod('resMod');renderRes();toast('Resource saved','success');}
 function delRes(id){if(!confirm('Delete resource?'))return;const r=Store.getResources();delete r[id];Store.saveResources(r);renderRes();toast('Resource deleted');}
 
 // ============================================================
