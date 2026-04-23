@@ -14097,20 +14097,19 @@ function selectDev(dev){
     $('screen-select').style.display='none';
     $('app-header').style.display='';
     $('app-body').style.display='';
-    // Add dev indicator badge next to logo
+    // Add dev indicator badge next to logo. Always rendered — even on ALL —
+    // so the user has a one-click way back to the Select Development screen.
     const existing=$('dev-badge');if(existing)existing.remove();
-    if(dev!=='ALL'){
-      const badge=document.createElement('span');
-      badge.id='dev-badge';
-      badge.style.cssText='font-size:11px;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;cursor:pointer;flex-shrink:0;transition:.15s';
-      badge.title='Click to switch development';
-      badge.textContent=dev;
-      badge.onmouseover=()=>badge.style.background='var(--surface3)';
-      badge.onmouseout=()=>badge.style.background='var(--surface2)';
-      badge.onclick=switchDev;
-      const logoWrap=document.querySelector('#app-header>div');
-      if(logoWrap)logoWrap.appendChild(badge);
-    }
+    const badge=document.createElement('span');
+    badge.id='dev-badge';
+    badge.style.cssText='font-size:11px;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;cursor:pointer;flex-shrink:0;transition:.15s;display:inline-flex;align-items:center;gap:6px';
+    badge.title='Back to Select Development';
+    badge.innerHTML='<span style="font-size:13px;line-height:1">←</span><span>'+(dev==='ALL'?'All Developments':dev)+'</span>';
+    badge.onmouseover=()=>badge.style.background='var(--surface3)';
+    badge.onmouseout=()=>badge.style.background='var(--surface2)';
+    badge.onclick=switchDev;
+    const logoWrap=document.querySelector('#app-header>div');
+    if(logoWrap)logoWrap.appendChild(badge);
     _origDevFilter=dev==='ALL'?null:dev;
     boot();
   },300);
