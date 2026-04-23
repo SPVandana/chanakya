@@ -5,13 +5,9 @@
 <title>Chanakya PM . Team Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ========================================================================
-     White Lotus brand. Palette: Ferrous, Sandstone, Charcoal, Cement, Ivory,
-     Gold (accent). Typography: DM Serif Display for display, Open Sans for
-     body. 8px spacing grid. Single accent per page.
-     ====================================================================== */
+  /* White Lotus brand. Palette, typography, 8px grid, single accent per page. */
   :root{
     --ferrous: #965532;
     --sandstone: #FAE1C8;
@@ -19,14 +15,13 @@
     --cement: #8B8680;
     --ivory: #F7F2E9;
     --gold: #B8975A;
-    /* 8px grid tokens */
     --s1: 8px;  --s2: 16px; --s3: 24px; --s4: 32px;
     --s5: 40px; --s6: 48px; --s7: 56px; --s8: 64px;
   }
 
   @page{
     size: A4;
-    margin: 24mm 24mm 24mm 24mm;
+    margin: 22mm 22mm 22mm 22mm;
     @bottom-center{
       content: "RARE . TIMELESS . SOULFUL . CONSCIOUS . BESPOKE";
       font-family: 'Open Sans', sans-serif;
@@ -39,7 +34,6 @@
       content: counter(page);
       font-family: 'Open Sans', sans-serif;
       font-size: 9pt;
-      font-weight: 400;
       color: #8B8680;
     }
   }
@@ -55,49 +49,46 @@
     font-family: 'Open Sans', sans-serif;
     font-size: 10pt;
     font-weight: 400;
-    line-height: 24px; /* 8 grid */
+    line-height: 16px;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ---------- type scale (all on 8px grid) ---------- */
   h1{
     font-family: 'DM Serif Display', serif;
     font-weight: 400;
-    font-size: 22pt;
-    line-height: 40px;
-    color: var(--charcoal);
-    margin-top: var(--s6);
-    margin-bottom: var(--s3);
-    page-break-after: avoid;
-  }
-  h1:first-child{ margin-top: 0; }
-  h2{
-    font-family: 'DM Serif Display', serif;
-    font-weight: 400;
-    font-size: 14pt;
+    font-size: 20pt;
     line-height: 32px;
     color: var(--charcoal);
     margin-top: var(--s4);
+    margin-bottom: var(--s2);
+    page-break-after: avoid;
+  }
+  h1:first-child, section > h1:first-of-type{ margin-top: 0; }
+  h2{
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 700;
+    font-size: 10.5pt;
+    line-height: 16px;
+    letter-spacing: 0.02em;
+    color: var(--charcoal);
+    margin-top: var(--s3);
     margin-bottom: var(--s1);
     page-break-after: avoid;
   }
   h3{
     font-family: 'Open Sans', sans-serif;
     font-weight: 600;
-    font-size: 10.5pt;
-    line-height: 24px;
+    font-size: 9.5pt;
+    line-height: 16px;
     color: var(--charcoal);
+    margin: 0 0 4px 0;
     letter-spacing: 0.01em;
-    margin-top: var(--s2);
-    margin-bottom: var(--s1);
-    page-break-after: avoid;
   }
-  p{ margin-bottom: var(--s2); max-width: 155mm; }
-  strong{ font-weight: 600; color: var(--charcoal); }
+  p{ margin-bottom: var(--s2); max-width: 160mm; line-height: 16px; }
+  strong{ font-weight: 600; }
   em{ font-style: normal; color: var(--cement); }
-
   ul, ol{ margin-bottom: var(--s2); padding-left: var(--s3); }
-  li{ margin-bottom: var(--s1); line-height: 24px; max-width: 150mm; }
+  li{ margin-bottom: 4px; line-height: 16px; max-width: 158mm; }
   li::marker{ color: var(--cement); }
 
   code{
@@ -108,37 +99,30 @@
     padding: 0;
   }
 
-  /* ---------- utility ---------- */
   .kicker{
     font-family: 'Open Sans', sans-serif;
     font-weight: 500;
-    font-size: 8pt;
+    font-size: 7.5pt;
     letter-spacing: 0.32em;
     text-transform: uppercase;
     color: var(--cement);
-    margin-bottom: var(--s2);
-  }
-  .rule{
-    height: 1px;
-    background: var(--cement);
-    opacity: 0.3;
-    margin: var(--s3) 0;
-    border: none;
+    margin-bottom: var(--s1);
   }
   .accent-rule{
     height: 2px;
-    width: 40px;
+    width: 32px;
     background: var(--ferrous);
     border: none;
     margin: 0 0 var(--s3) 0;
   }
+
   .page-break{ page-break-before: always; }
   .avoid-break{ page-break-inside: avoid; }
 
   /* ---------- cover ---------- */
   .cover{
     page-break-after: always;
-    height: 240mm;
+    height: 253mm;
     display: flex;
     flex-direction: column;
     padding-top: var(--s8);
@@ -146,21 +130,21 @@
   .cover .mark{
     font-family: 'Open Sans', sans-serif;
     font-weight: 600;
-    font-size: 9pt;
+    font-size: 8.5pt;
     letter-spacing: 0.32em;
     color: var(--cement);
     text-transform: uppercase;
     margin-bottom: var(--s8);
   }
   .cover-bar{
-    width: 64px; height: 2px;
+    width: 56px; height: 2px;
     background: var(--ferrous);
-    margin-bottom: var(--s4);
+    margin-bottom: var(--s3);
   }
   .cover h1{
     font-family: 'DM Serif Display', serif;
-    font-size: 52pt;
-    line-height: 64px;
+    font-size: 48pt;
+    line-height: 56px;
     color: var(--charcoal);
     margin: 0 0 var(--s3) 0;
     max-width: 160mm;
@@ -169,11 +153,11 @@
   .cover .sub{
     font-family: 'Open Sans', sans-serif;
     font-weight: 300;
-    font-size: 13pt;
-    line-height: 24px;
+    font-size: 12pt;
+    line-height: 20px;
     color: var(--cement);
-    max-width: 140mm;
-    margin-bottom: var(--s8);
+    max-width: 135mm;
+    margin-bottom: var(--s6);
   }
   .cover .meta{
     margin-top: auto;
@@ -183,181 +167,188 @@
     color: var(--charcoal);
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: var(--s1) var(--s3);
+    gap: 6px var(--s3);
   }
-  .cover .meta .k{ color: var(--cement); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; font-size: 8pt; }
+  .cover .meta .k{
+    color: var(--cement);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 7.5pt;
+  }
   .cover .tag{
     font-family: 'Open Sans', sans-serif;
     font-weight: 500;
-    font-size: 8pt;
+    font-size: 7.5pt;
     letter-spacing: 0.32em;
     color: var(--cement);
     text-align: center;
     border-top: 1px solid rgba(139,134,128,0.3);
     padding-top: var(--s2);
-    margin-top: var(--s6);
+    margin-top: var(--s4);
   }
+
+  /* ---------- inline TOC under cover-style ---------- */
+  .toc{ margin-bottom: var(--s2); }
+  .toc ol{ list-style: none; padding: 0; margin: 0; }
+  .toc li{
+    display: flex;
+    align-items: baseline;
+    gap: var(--s2);
+    font-size: 10pt;
+    line-height: 24px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(139,134,128,0.18);
+    margin: 0;
+  }
+  .toc li:last-child{ border-bottom: none; }
+  .toc .num{
+    font-family: 'DM Serif Display', serif;
+    color: var(--cement);
+    width: 28px;
+    font-size: 12pt;
+  }
+  .toc .ttl{ flex: 1; color: var(--charcoal); font-weight: 400; }
+  .toc .pg{ color: var(--cement); font-size: 8.5pt; font-variant-numeric: tabular-nums; }
 
   /* ---------- tables ---------- */
   table{
     width: 100%;
     border-collapse: collapse;
-    margin: var(--s2) 0 var(--s3);
+    margin: var(--s1) 0 var(--s2);
     font-size: 9.5pt;
-    line-height: 24px;
+    line-height: 16px;
     page-break-inside: avoid;
   }
   th{
     text-align: left;
-    padding: var(--s1) var(--s2) var(--s1) 0;
+    padding: 6px var(--s2) 6px 0;
     border-bottom: 1px solid var(--charcoal);
     color: var(--charcoal);
     font-weight: 600;
-    font-size: 8.5pt;
-    letter-spacing: 0.08em;
+    font-size: 7.5pt;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
   td{
-    padding: var(--s1) var(--s2) var(--s1) 0;
-    border-bottom: 1px solid rgba(139,134,128,0.2);
+    padding: 6px var(--s2) 6px 0;
+    border-bottom: 1px solid rgba(139,134,128,0.18);
     vertical-align: top;
     color: var(--charcoal);
+    font-size: 9.5pt;
   }
   tr:last-child td{ border-bottom: none; }
-  td .muted{ color: var(--cement); font-size: 9pt; }
 
-  /* ---------- permission tag pills ---------- */
+  /* ---------- permission tag ---------- */
   .perm{
     display: inline-block;
     font-family: 'Open Sans', sans-serif;
     font-weight: 500;
-    font-size: 8pt;
+    font-size: 7.5pt;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 0 var(--s1);
-    margin-right: var(--s1);
+    padding: 0 6px;
+    margin-right: 4px;
     color: var(--cement);
-    border: 1px solid var(--cement);
-    border-radius: 0;
-    line-height: 16px;
+    border: 1px solid rgba(139,134,128,0.5);
+    line-height: 14px;
   }
 
-  /* ---------- sandstone callout (minimal) ---------- */
-  .callout{
-    background: var(--sandstone);
-    padding: var(--s2) var(--s3);
-    margin: var(--s2) 0;
-    font-size: 9.5pt;
-    line-height: 24px;
-    page-break-inside: avoid;
-  }
-  .callout strong{ color: var(--ferrous); }
-
-  /* ---------- feature grid ---------- */
+  /* ---------- feature grid, denser ---------- */
   .features{
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--s3) var(--s4);
-    margin: var(--s2) 0 var(--s3);
+    gap: var(--s2) var(--s4);
+    margin: var(--s2) 0 var(--s2);
   }
-  .feat{
-    page-break-inside: avoid;
-  }
+  .feat{ page-break-inside: avoid; }
   .feat h3{
-    font-size: 10pt;
-    font-weight: 600;
-    margin: 0 0 var(--s1) 0;
+    font-size: 9.5pt;
+    font-weight: 700;
+    margin: 0 0 4px 0;
     color: var(--charcoal);
-    letter-spacing: 0.02em;
   }
   .feat ul{
     list-style: none;
     padding-left: 0;
     margin: 0;
-    font-size: 9pt;
-    line-height: 20px;
+    font-size: 8.5pt;
+    line-height: 14px;
   }
   .feat li{
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     color: var(--cement);
     padding-left: var(--s2);
     position: relative;
+    max-width: 80mm;
   }
   .feat li::before{
     content: "";
     position: absolute;
-    left: 0; top: 9px;
+    left: 0; top: 7px;
     width: 8px; height: 1px;
     background: var(--cement);
   }
 
-  /* ---------- TOC ---------- */
-  .toc{ margin: var(--s4) 0; }
-  .toc ol{ list-style: none; padding: 0; }
-  .toc li{
-    display: flex;
-    align-items: baseline;
-    gap: var(--s2);
-    font-size: 11pt;
-    line-height: 32px;
-    padding: var(--s1) 0;
-    border-bottom: 1px solid rgba(139,134,128,0.2);
-    margin: 0;
-  }
-  .toc .num{
-    font-family: 'DM Serif Display', serif;
-    color: var(--cement);
-    width: var(--s4);
-    font-size: 14pt;
-  }
-  .toc .ttl{ flex: 1; color: var(--charcoal); font-weight: 400; }
-  .toc .pg{ color: var(--cement); font-size: 9pt; font-variant-numeric: tabular-nums; }
-
-  /* ---------- cheat sheet ---------- */
-  .cheat{
-    background: var(--sandstone);
-    padding: var(--s4);
-    margin: var(--s3) 0;
-    page-break-inside: avoid;
-  }
-  .cheat .title{
-    font-family: 'DM Serif Display', serif;
-    font-size: 16pt;
-    line-height: 32px;
+  /* ---------- tip line. single-line accent, no box ---------- */
+  .tip{
+    font-size: 9pt;
+    line-height: 16px;
     color: var(--charcoal);
-    margin-bottom: var(--s1);
+    border-left: 2px solid var(--ferrous);
+    padding-left: var(--s2);
+    margin: var(--s2) 0;
+    max-width: 158mm;
   }
-  .cheat .subtitle{
+  .tip strong{ color: var(--ferrous); font-weight: 600; }
+
+  /* ---------- cheat sheet. gold accent, no background ---------- */
+  .cheat-head{ margin-top: var(--s3); }
+  .cheat-bar{
+    width: 56px; height: 2px;
+    background: var(--gold);
+    border: none;
+    margin-bottom: var(--s2);
+  }
+  .cheat-title{
+    font-family: 'DM Serif Display', serif;
+    font-size: 18pt;
+    line-height: 24px;
+    color: var(--charcoal);
+    margin-bottom: 4px;
+  }
+  .cheat-sub{
     font-family: 'Open Sans', sans-serif;
-    font-size: 8.5pt;
+    font-size: 8pt;
     letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: var(--ferrous);
+    color: var(--gold);
     margin-bottom: var(--s3);
   }
   .cheat dl{
     display: grid;
-    grid-template-columns: 52mm 1fr;
+    grid-template-columns: 56mm 1fr;
     row-gap: var(--s1);
     column-gap: var(--s3);
     font-size: 10pt;
-    line-height: 24px;
+    line-height: 16px;
+    margin: 0;
   }
   .cheat dt{ color: var(--charcoal); font-weight: 600; }
   .cheat dd{ color: var(--charcoal); font-weight: 400; margin: 0; }
 
-  /* ---------- gold accent (used once, on cheat-sheet page only) ---------- */
-  .gold-bar{
-    width: 64px; height: 2px;
-    background: var(--gold);
-    margin-bottom: var(--s3);
-    border: none;
+  /* ---------- two-column list for density ---------- */
+  .two-col{
+    column-count: 2;
+    column-gap: var(--s4);
   }
+  .two-col ul{ margin: 0; }
+  .two-col li{ break-inside: avoid; }
 </style>
 </head>
 <body>
 
-<!-- ============================== COVER ============================== -->
+<!-- ============================ COVER ============================ -->
 <section class="cover">
   <div class="mark">White Lotus Group</div>
   <div class="cover-bar"></div>
@@ -374,136 +365,99 @@
   <div class="tag">RARE . TIMELESS . SOULFUL . CONSCIOUS . BESPOKE</div>
 </section>
 
-<!-- ============================== CONTENTS ============================== -->
+<!-- ============================ 1. SIGN IN + NAVIGATE ============================ -->
 <section>
-  <div class="kicker">Contents</div>
-  <hr class="accent-rule">
-  <div class="toc">
-    <ol>
-      <li><span class="num">01</span><span class="ttl">Signing in</span><span class="pg">03</span></li>
-      <li><span class="num">02</span><span class="ttl">Navigating the app</span><span class="pg">04</span></li>
-      <li><span class="num">03</span><span class="ttl">Daily tasks</span><span class="pg">05</span></li>
-      <li><span class="num">04</span><span class="ttl">Who can do what</span><span class="pg">06</span></li>
-      <li><span class="num">05</span><span class="ttl">Working together</span><span class="pg">07</span></li>
-      <li><span class="num">06</span><span class="ttl">Complete feature list</span><span class="pg">08</span></li>
-      <li><span class="num">07</span><span class="ttl">Troubleshooting and limits</span><span class="pg">10</span></li>
-      <li><span class="num">08</span><span class="ttl">Daily cheat sheet</span><span class="pg">11</span></li>
-    </ol>
-  </div>
-</section>
-
-<!-- ============================== 1. SIGNING IN ============================== -->
-<section class="page-break">
   <div class="kicker">Section 01</div>
-  <h1>Signing in</h1>
+  <h1>Sign in and navigate</h1>
   <hr class="accent-rule">
 
-  <h2>Google sign in</h2>
-  <p>Preferred for everyone at White Lotus Group.</p>
+  <h2>Sign in with Google (preferred)</h2>
   <ol>
     <li>Open <code>chanakya-pm.onrender.com</code></li>
-    <li>Click <strong>Sign in with Google</strong></li>
-    <li>Choose your <code>@whitelotusgroup.in</code> work account</li>
+    <li>Click <strong>Sign in with Google</strong>, choose your <code>@whitelotusgroup.in</code> account</li>
   </ol>
   <p>First time sign in auto creates your account with <span class="perm">edit</span> access. Need more, ask Vandana.</p>
 
   <h2>Email and password</h2>
-  <ol>
-    <li>Enter your work email</li>
-    <li>Enter the shared default password from Vandana</li>
-    <li>Click <strong>Sign In</strong></li>
-  </ol>
-  <p>Forgot your password, email Vandana. Self reset is not yet available.</p>
+  <p>Enter your work email and the shared default password from Vandana. Forgot yours, email Vandana. Self reset is not yet built.</p>
 
   <h2>Session</h2>
   <ul>
-    <li>You stay signed in for seven days</li>
-    <li>A warning banner appears fifteen minutes before expiry so you can save and sign in again</li>
-    <li>If a session expires mid edit, you are returned to the login screen with a clear notice</li>
+    <li>Signed in for seven days</li>
+    <li>Warning banner fifteen minutes before expiry so you can save and sign in again</li>
   </ul>
-</section>
 
-<!-- ============================== 2. NAVIGATING ============================== -->
-<section class="page-break">
-  <div class="kicker">Section 02</div>
-  <h1>Navigating the app</h1>
-  <hr class="accent-rule">
+  <h2>Navigating</h2>
+  <p>You land on <strong>Select Development</strong>. Choose Amanvana, Kandhavara, or View All. Click a villa card to open its dashboard. The badge next to the Chanakya logo shows the current development, click it to go back.</p>
 
-  <p>After signing in, you land on the <strong>Select Development</strong> screen. Choose <strong>Amanvana</strong>, <strong>Kandhavara</strong>, or <strong>View All Developments</strong>. Click a villa card to open its dashboard.</p>
-
-  <div class="callout">
-    <strong>Tip.</strong> The badge next to the Chanakya logo shows which development you are in. Click it to return to the Select Development screen.
-  </div>
-
-  <h2>Villa dashboard tabs</h2>
+  <h3>Villa dashboard tabs</h3>
   <table>
-    <thead><tr><th style="width:28mm">Tab</th><th>What it shows</th></tr></thead>
+    <thead><tr><th style="width:30mm">Tab</th><th>What it shows</th></tr></thead>
     <tbody>
       <tr><td><strong>WBS</strong></td><td>Full task table, phases, subphases, every task</td></tr>
-      <tr><td><strong>Gantt</strong></td><td>Visual timeline with bars, dependencies, critical path</td></tr>
+      <tr><td><strong>Gantt</strong></td><td>Visual timeline, dependencies, critical path</td></tr>
       <tr><td><strong>Report</strong></td><td>Daily, weekly, monthly progress reports</td></tr>
-      <tr><td><strong>Planner</strong></td><td>Week by week task planner</td></tr>
-      <tr><td><strong>Baselines</strong></td><td>Snapshots of schedule versions for comparison</td></tr>
-      <tr><td><strong>Critical Path</strong></td><td>Tasks that determine the project end date</td></tr>
-      <tr><td><strong>Calendar</strong></td><td>Tasks plotted on a calendar grid</td></tr>
+      <tr><td><strong>Planner</strong></td><td>Week by week planner</td></tr>
+      <tr><td><strong>Baselines</strong></td><td>Schedule snapshots for comparison</td></tr>
+      <tr><td><strong>Critical Path</strong></td><td>Tasks that drive the project end date</td></tr>
+      <tr><td><strong>Calendar</strong></td><td>Tasks on a calendar grid</td></tr>
       <tr><td><strong>Resources</strong></td><td>Team and material allocation</td></tr>
       <tr><td><strong>Costs</strong></td><td>Budget versus actual</td></tr>
       <tr><td><strong>Approvals</strong></td><td>Items waiting for sign off</td></tr>
     </tbody>
   </table>
-
-  <p>The left sidebar lists every villa in the current development. Click any name to switch.</p>
 </section>
 
-<!-- ============================== 3. DAILY TASKS ============================== -->
+<!-- ============================ 2. DAILY TASKS ============================ -->
 <section class="page-break">
-  <div class="kicker">Section 03</div>
+  <div class="kicker">Section 02</div>
   <h1>Daily tasks</h1>
   <hr class="accent-rule">
 
   <h2>Add a task <span class="perm">edit</span></h2>
   <ol>
-    <li>Villa dashboard, <strong>WBS</strong> tab</li>
-    <li>Click <strong>Add Task</strong>, top right</li>
-    <li>Fill in name, phase, dates, status, progress</li>
-    <li>Optional, add predecessors, assignee, cost, notes</li>
-    <li>Click <strong>Save</strong>. Auto saves within 1.5 seconds.</li>
+    <li>Villa, <strong>WBS</strong> tab, <strong>Add Task</strong> (top right)</li>
+    <li>Fill name, phase, dates, status, progress. Optional. predecessors, assignee, cost.</li>
+    <li>Save. Auto syncs within 1.5 seconds.</li>
   </ol>
 
   <h2>Edit a task</h2>
-  <ol>
-    <li>Click the task row. The task panel opens on the right.</li>
-    <li>Edit fields, changes save automatically</li>
-    <li>Or click the task name to open the full modal</li>
-  </ol>
-  <p>On the Gantt, drag a bar left or right to shift dates. Duration is preserved. An undo button appears.</p>
+  <p>Click the task row, the panel opens on the right. Edit fields, changes save automatically. On the Gantt, drag a bar left or right to shift dates. Duration is preserved, and an undo button appears.</p>
 
   <h2>Status, blocked, delete</h2>
   <ul>
     <li>Change <strong>Status</strong> from the dropdown</li>
-    <li>For <strong>blocked</strong> or <strong>on hold</strong>, a reason field appears. Fill it in so teammates know why.</li>
+    <li>For <strong>blocked</strong> or <strong>on hold</strong>, a reason field appears. Fill it in.</li>
     <li>Delete shows a toast with <strong>Undo</strong> for six seconds. Admins can restore later via the audit log.</li>
   </ul>
 
   <h2>Baselines <span class="perm">edit</span></h2>
-  <ol>
-    <li>Open the <strong>Baselines</strong> tab</li>
-    <li>Click <strong>Capture New Baseline</strong></li>
-    <li>Name it, add notes, save</li>
-  </ol>
-  <p>Baselines are read only snapshots. Compare any two to see schedule changes.</p>
+  <p>Open the <strong>Baselines</strong> tab, click <strong>Capture New Baseline</strong>, name it, save. Baselines are read only snapshots. Compare any two to see schedule changes.</p>
 
-  <h2>Import, export, audit log <span class="perm">manage</span></h2>
+  <h2>Import, export, audit <span class="perm">manage</span></h2>
   <ul>
-    <li><strong>Import</strong>. CSV or Excel, three modes, column mapper with preview.</li>
+    <li><strong>Import</strong>. CSV or Excel. Three modes. Column mapper with preview.</li>
     <li><strong>Export</strong>. Downloads a full JSON backup. Every export is logged.</li>
-    <li><strong>Audit log</strong>. Last five hundred actions, who changed what and when.</li>
+    <li><strong>Audit log</strong>. Last five hundred actions. Who changed what, when.</li>
   </ul>
+
+  <h2>Shortcuts</h2>
+  <table>
+    <thead><tr><th style="width:56mm">Action</th><th>Shortcut</th></tr></thead>
+    <tbody>
+      <tr><td>Save a modal</td><td>Enter inside a text field</td></tr>
+      <tr><td>Cancel a modal</td><td>Escape</td></tr>
+      <tr><td>Reschedule on Gantt</td><td>Drag the bar</td></tr>
+      <tr><td>Zoom Gantt</td><td>Week, Month, Quarter</td></tr>
+      <tr><td>Hard reload</td><td>Cmd+Shift+R or Ctrl+Shift+R</td></tr>
+      <tr><td>DevTools console</td><td>Cmd+Option+J or F12</td></tr>
+    </tbody>
+  </table>
 </section>
 
-<!-- ============================== 4. PERMISSIONS ============================== -->
+<!-- ============================ 3. PERMISSIONS ============================ -->
 <section class="page-break">
-  <div class="kicker">Section 04</div>
+  <div class="kicker">Section 03</div>
   <h1>Who can do what</h1>
   <hr class="accent-rule">
 
@@ -536,72 +490,38 @@
     </tbody>
   </table>
   <p>Anyone else from <code>@whitelotusgroup.in</code> who signs in via Google gets <strong>edit</strong> automatically. Contact Vandana for elevated permissions.</p>
+
+  <h2>Working together</h2>
+  <ul>
+    <li>Every change auto saves every 1.5 seconds. Others see it on reload or next save.</li>
+    <li>If two people edit the same villa at once, whoever saves second is asked to <strong>Reload</strong>, then redo the edit. No data is silently lost.</li>
+    <li>If the connection drops, a banner retries every five seconds. After thirty seconds it turns red and asks you to stop editing until the network returns.</li>
+    <li>Every create, edit, delete, reschedule, import, export, and approval is logged with your name and timestamp.</li>
+  </ul>
 </section>
 
-<!-- ============================== 5. WORKING TOGETHER ============================== -->
+<!-- ============================ 4. FEATURES ============================ -->
 <section class="page-break">
-  <div class="kicker">Section 05</div>
-  <h1>Working together</h1>
-  <hr class="accent-rule">
-
-  <h2>Auto save and conflicts</h2>
-  <ul>
-    <li>Every change auto saves to the server every 1.5 seconds</li>
-    <li>Other team members see your changes on reload or next save</li>
-    <li>If two people edit the same villa at once, whoever saves second sees the banner <em>Another user saved changes after you last synced. Reload to see the latest, then retry your edit.</em></li>
-    <li>Click <strong>Reload</strong>, redo your edit. No data is silently lost.</li>
-  </ul>
-
-  <h2>Offline and bad network</h2>
-  <ul>
-    <li>If the connection drops, a banner reads <em>Your changes are not syncing to the server. Retrying.</em></li>
-    <li>The app retries automatically every five seconds</li>
-    <li>If saves keep failing for thirty seconds or more, the banner turns red and asks you to stop editing until the connection returns</li>
-    <li>Click <strong>Retry now</strong> to force a retry, or <strong>Reload</strong> to start fresh</li>
-  </ul>
-
-  <h2>What is logged</h2>
-  <p>Every create, edit, delete, reschedule, import, export, and approval is logged with your name and a timestamp. Admins can review the log at any time.</p>
-
-  <h2>Keyboard and mouse</h2>
-  <table>
-    <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
-    <tbody>
-      <tr><td>Save task modal</td><td>Enter, inside a text field</td></tr>
-      <tr><td>Cancel modal</td><td>Escape</td></tr>
-      <tr><td>Quick edit, WBS</td><td>Click a task cell</td></tr>
-      <tr><td>Reschedule on Gantt</td><td>Drag the bar</td></tr>
-      <tr><td>Zoom Gantt</td><td>Week, Month, Quarter</td></tr>
-      <tr><td>Hard reload</td><td>Cmd+Shift+R or Ctrl+Shift+R</td></tr>
-      <tr><td>DevTools console</td><td>Cmd+Option+J or F12</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- ============================== 6. FEATURE LIST ============================== -->
-<section class="page-break">
-  <div class="kicker">Section 06</div>
+  <div class="kicker">Section 04</div>
   <h1>Complete feature list</h1>
   <hr class="accent-rule">
-  <p>A full inventory of what Chanakya can do today. Items flagged <span class="perm">manage</span> require elevated permission.</p>
+  <p>Full inventory of what Chanakya does today. Items marked <span class="perm">manage</span> require elevated permission.</p>
 
   <div class="features">
     <div class="feat">
-      <h3>Multi development structure</h3>
+      <h3>Multi development</h3>
       <ul>
-        <li>Amanvana, Kandhavara, and any development you add</li>
-        <li>Per development villa cards with progress and risk</li>
+        <li>Amanvana, Kandhavara, custom developments</li>
+        <li>Per development villa cards with risk</li>
         <li>View All Developments cross roll up</li>
-        <li>Add new developments <span class="perm">manage</span></li>
       </ul>
     </div>
     <div class="feat">
-      <h3>Villa management</h3>
+      <h3>Villa management <span class="perm">manage</span></h3>
       <ul>
-        <li>Create, edit, delete villas <span class="perm">manage</span></li>
+        <li>Create, edit, delete villas</li>
         <li>Status. on track, at risk, delayed, on hold</li>
         <li>Auto computed progress from tasks</li>
-        <li>Contractor, PM, SS, budget, area, notes</li>
         <li>Copy villa task structure</li>
       </ul>
     </div>
@@ -612,7 +532,6 @@
         <li>Dates, status, progress, priority, assignee, cost</li>
         <li>Milestones, inspection flags, blocking reason</li>
         <li>Phase and subphase grouping, collapsible</li>
-        <li>Multi select and bulk actions</li>
         <li>Predecessors. FS, SS, FF, SF with lag</li>
       </ul>
     </div>
@@ -620,8 +539,7 @@
       <h3>Gantt chart</h3>
       <ul>
         <li>Zoom. Week, Month, Quarter</li>
-        <li>Dependency arrows</li>
-        <li>Critical path highlighting</li>
+        <li>Dependency arrows and critical path</li>
         <li>Critical only and milestones only filters</li>
         <li>Baseline overlay</li>
         <li>Drag to reschedule with undo</li>
@@ -633,26 +551,25 @@
       <ul>
         <li>Collapsible phase and subphase tree</li>
         <li>Sortable columns</li>
-        <li>Persistent filters across tab switches</li>
-        <li>Field validation with visual feedback</li>
-        <li>Status tooltips explaining how each was derived</li>
+        <li>Persistent filters across tabs</li>
+        <li>Field validation with feedback</li>
       </ul>
     </div>
     <div class="feat">
       <h3>Baselines</h3>
       <ul>
-        <li>Capture snapshots at any time</li>
+        <li>Capture snapshots anytime</li>
         <li>Multiple baselines per villa</li>
         <li>Side by side compare with variance</li>
         <li>Overlay on the Gantt</li>
       </ul>
     </div>
     <div class="feat">
-      <h3>Critical path analysis</h3>
+      <h3>Critical path</h3>
       <ul>
-        <li>Automatic computation from predecessors</li>
+        <li>Automatic from predecessors</li>
         <li>Dedicated Critical Path tab</li>
-        <li>Total float shown per task</li>
+        <li>Total float per task</li>
         <li>Critical tasks highlighted on Gantt</li>
       </ul>
     </div>
@@ -661,7 +578,7 @@
       <ul>
         <li>Request approval from any task panel</li>
         <li>Approvals queue for approvers</li>
-        <li>Approve or reject with a comment</li>
+        <li>Approve or reject with comment</li>
         <li>Status shown on the task</li>
       </ul>
     </div>
@@ -677,18 +594,16 @@
       <h3>Planner</h3>
       <ul>
         <li>Weekly and monthly views</li>
-        <li>Drag and drop task assignment</li>
+        <li>Drag and drop assignment</li>
         <li>Per week load visibility</li>
-        <li>State persists across sessions</li>
       </ul>
     </div>
     <div class="feat">
-      <h3>Today tasks panel</h3>
+      <h3>Today tasks</h3>
       <ul>
-        <li>Tasks due today across every villa</li>
+        <li>Due today across every villa</li>
         <li>Tomorrow and upcoming preview</li>
         <li>Inline quick edit</li>
-        <li>Progress and save indicator</li>
       </ul>
     </div>
     <div class="feat">
@@ -696,7 +611,6 @@
       <ul>
         <li>Daily, weekly, monthly</li>
         <li>CSV export per view</li>
-        <li>Full JSON backup and restore</li>
         <li>Printable report window</li>
       </ul>
     </div>
@@ -705,34 +619,31 @@
       <ul>
         <li>Live interactive villa master plan</li>
         <li>Status colour coding per villa</li>
-        <li>Reads live data from the app</li>
       </ul>
     </div>
     <div class="feat">
       <h3>Costs</h3>
       <ul>
-        <li>Villa level budget versus actual</li>
-        <li>Per task cost</li>
-        <li>Contingency percentage</li>
+        <li>Villa budget versus actual</li>
+        <li>Per task cost and contingency</li>
         <li>Currency. INR, USD, EUR, GBP</li>
       </ul>
     </div>
     <div class="feat">
       <h3>Calendar</h3>
       <ul>
-        <li>Tasks on a monthly calendar grid</li>
+        <li>Tasks on a monthly grid</li>
         <li>Colour coded by status</li>
-        <li>Click any day to see the tasks due</li>
+        <li>Click any day for tasks due</li>
       </ul>
     </div>
     <div class="feat">
       <h3>Data import <span class="perm">manage</span></h3>
       <ul>
         <li>CSV and Excel upload</li>
-        <li>Three modes. By Phase, By Villa, WL Master Schedule</li>
+        <li>Three modes. By Phase, By Villa, Master Schedule</li>
         <li>Column mapper with preview</li>
         <li>Optional dependency mapping</li>
-        <li>Safe restore pane</li>
       </ul>
     </div>
     <div class="feat">
@@ -740,108 +651,92 @@
       <ul>
         <li>Every action logged automatically</li>
         <li>User, action, entity, timestamp</li>
-        <li>Last five hundred entries displayed</li>
+        <li>Last five hundred entries</li>
       </ul>
     </div>
     <div class="feat">
       <h3>Security</h3>
       <ul>
-        <li>JWT session, seven days, fifteen minute expiry warning</li>
+        <li>JWT session, seven days, expiry warning</li>
         <li>bcrypt password hashing</li>
         <li>Google Sign In with domain allow list</li>
-        <li>Role based access. view, edit, approve, manage</li>
-        <li>Rate limited login to blunt brute force</li>
-        <li>XSS input filter on all user entered names</li>
-        <li>HTTPS only</li>
+        <li>Role based access control</li>
+        <li>Rate limited login against brute force</li>
+        <li>XSS input filter on user entered names</li>
       </ul>
     </div>
     <div class="feat">
       <h3>Reliability</h3>
       <ul>
-        <li>Auto save every 1.5 seconds</li>
-        <li>Optimistic locking, no silent data loss</li>
-        <li>Offline banner with automatic retry</li>
-        <li>Critical warning if offline for thirty seconds</li>
-        <li>Boot failure canary with clean reload</li>
+        <li>Auto save with optimistic locking</li>
+        <li>Offline banner and automatic retry</li>
+        <li>Boot failure recovery overlay</li>
         <li>Four layer pre deploy smoke test</li>
       </ul>
     </div>
     <div class="feat">
       <h3>UX polish</h3>
       <ul>
-        <li>Warm brown and gold, White Lotus aligned</li>
+        <li>Brand aligned warm palette</li>
         <li>Undo for destructive actions</li>
         <li>Real time field validation</li>
-        <li>Persistent WBS filters</li>
         <li>Enter to save, Escape to cancel</li>
-        <li>Smooth screen transitions</li>
       </ul>
     </div>
   </div>
 </section>
 
-<!-- ============================== 7. TROUBLESHOOTING ============================== -->
+<!-- ============================ 5. TROUBLESHOOTING + CHEAT SHEET ============================ -->
 <section class="page-break">
-  <div class="kicker">Section 07</div>
-  <h1>Troubleshooting and limits</h1>
+  <div class="kicker">Section 05</div>
+  <h1>Troubleshoot, limits, support</h1>
   <hr class="accent-rule">
 
-  <h2>Common issues</h2>
+  <h2>If you see</h2>
   <table>
-    <thead><tr><th style="width:60mm">If you see</th><th>Do this</th></tr></thead>
+    <thead><tr><th style="width:62mm">Symptom</th><th>Do this</th></tr></thead>
     <tbody>
-      <tr><td>Cannot sign in</td><td>Verify the URL, try Google sign in, email Vandana</td></tr>
-      <tr><td>Raw code on screen or blank app</td><td>Hard reload. Cmd+Shift+R or Ctrl+Shift+R</td></tr>
+      <tr><td>Cannot sign in</td><td>Check the URL, try Google sign in, email Vandana</td></tr>
+      <tr><td>Raw code or a blank app</td><td>Hard reload. Cmd+Shift+R or Ctrl+Shift+R</td></tr>
       <tr><td>Another user saved banner</td><td>Click Reload, redo your edit</td></tr>
-      <tr><td>Missing Manage, Import, or New Villa</td><td>You do not have manage permission. Ask Vandana.</td></tr>
+      <tr><td>Missing Manage, Import, New Villa</td><td>You lack manage permission. Ask Vandana.</td></tr>
       <tr><td>Gantt is slow</td><td>Switch zoom from Week to Month or Quarter</td></tr>
-      <tr><td>Accidentally deleted a task</td><td>Click Undo in the toast, within six seconds. Otherwise contact Vandana.</td></tr>
+      <tr><td>Accidentally deleted a task</td><td>Click Undo in the toast within six seconds. Otherwise contact Vandana.</td></tr>
     </tbody>
   </table>
 
   <h2>Known limits</h2>
-  <ul>
-    <li>Desktop and laptop only. Mobile is not yet supported.</li>
-    <li>No self service password reset. Email Vandana.</li>
-    <li>No photo or document attachments yet. Use the shared drive.</li>
-    <li>Live updates appear on reload or next save, not instantly</li>
-    <li>Bulk task edit is limited to Gantt drag for date shifts</li>
-  </ul>
+  <div class="two-col">
+    <ul>
+      <li>Desktop and laptop only. Mobile is not yet supported.</li>
+      <li>No self service password reset. Email Vandana.</li>
+      <li>No photo or document attachments. Use the shared drive.</li>
+      <li>Live updates appear on reload or next save, not instantly.</li>
+      <li>Bulk task edit is limited to Gantt drag for date shifts.</li>
+    </ul>
+  </div>
 
   <h2>Support</h2>
-  <table>
-    <thead><tr><th style="width:70mm">Issue</th><th>Contact</th></tr></thead>
-    <tbody>
-      <tr><td>Cannot sign in or access changes</td><td>Vandana P</td></tr>
-      <tr><td>Bug report</td><td>Vandana P with a screenshot and DevTools console output</td></tr>
-      <tr><td>Data loss or accidental deletion</td><td>Vandana P</td></tr>
-      <tr><td>Feature request</td><td>Vandana P</td></tr>
-    </tbody>
-  </table>
-</section>
+  <p>All issues route to <strong>Vandana P</strong> at <code>vandana.p@whitelotusgroup.in</code>. For bugs, include a screenshot and the DevTools Console output so the fix can go in quickly.</p>
 
-<!-- ============================== 8. CHEAT SHEET ============================== -->
-<section class="page-break">
-  <div class="kicker">Section 08</div>
-  <h1>Daily cheat sheet</h1>
-  <hr class="gold-bar">
-
-  <div class="cheat">
-    <div class="subtitle">Chanakya PM . Quick reference</div>
-    <div class="title">The essentials on one page.</div>
-    <dl>
-      <dt>Sign in</dt>                <dd>chanakya-pm.onrender.com, Sign in with Google</dd>
-      <dt>Pick development</dt>       <dd>Amanvana, Kandhavara, View All</dd>
-      <dt>Switch development</dt>     <dd>Badge next to the Chanakya logo</dd>
-      <dt>Add a task</dt>             <dd>Villa, WBS tab, Add Task</dd>
-      <dt>Edit a task</dt>            <dd>Click the row, edit fields, auto saves</dd>
-      <dt>Reschedule</dt>             <dd>Gantt, drag the bar</dd>
-      <dt>Undo a delete</dt>          <dd>Click Undo in the toast within six seconds</dd>
-      <dt>Capture baseline</dt>       <dd>Baselines tab, Capture New Baseline</dd>
-      <dt>Save conflict</dt>          <dd>Click Reload in the banner, redo your edit</dd>
-      <dt>Anything stuck</dt>         <dd>Hard reload, then message Vandana</dd>
-      <dt>Sign out</dt>               <dd>Top right, Sign out</dd>
-    </dl>
+  <div class="cheat-head">
+    <hr class="cheat-bar">
+    <div class="cheat-sub">Daily cheat sheet</div>
+    <div class="cheat-title">The essentials on one page.</div>
+    <div class="cheat">
+      <dl>
+        <dt>Sign in</dt>               <dd>chanakya-pm.onrender.com, Sign in with Google</dd>
+        <dt>Pick development</dt>      <dd>Amanvana, Kandhavara, View All</dd>
+        <dt>Switch development</dt>    <dd>Badge next to the Chanakya logo</dd>
+        <dt>Add a task</dt>            <dd>Villa, WBS tab, Add Task</dd>
+        <dt>Edit a task</dt>           <dd>Click the row, edit fields, auto saves</dd>
+        <dt>Reschedule</dt>            <dd>Gantt, drag the bar</dd>
+        <dt>Undo a delete</dt>         <dd>Click Undo in the toast within six seconds</dd>
+        <dt>Capture baseline</dt>      <dd>Baselines tab, Capture New Baseline</dd>
+        <dt>Save conflict</dt>         <dd>Click Reload, redo your edit</dd>
+        <dt>Anything stuck</dt>        <dd>Hard reload, then message Vandana</dd>
+      </dl>
+    </div>
   </div>
 </section>
 
