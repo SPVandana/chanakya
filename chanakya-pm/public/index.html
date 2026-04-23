@@ -14371,6 +14371,76 @@ window._validateTaskData=_validateTaskData;
   }
 })();
 
+// Canary: marks the main script block as fully loaded. A SECOND script
+// below checks this flag — if it's missing, we know the main block got
+// truncated (e.g. by an unescaped </script> inside a template literal)
+// and show the user a clean recovery banner instead of raw JS leaking
+// through the page as HTML text.
+window.__ckyMainLoaded = true;
+
+</script>
+
+<script>
+// ═════════════════════════════════════════════════════════════════════
+//  BOOT-FAILURE CANARY
+// ═════════════════════════════════════════════════════════════════════
+// Runs in its own script context so it executes even if the main block
+// above was terminated prematurely by an HTML-parser trap. Three things
+// it guards against:
+//   1. </script> inside a template literal closes the main <script> early
+//   2. A hard JS syntax error in the main block halts execution
+//   3. The main block fails to download (e.g. connection dropped mid-file)
+//
+// If the main block DID finish, window.__ckyMainLoaded and window.doLogin
+// are both defined — canary does nothing. If either is missing by the
+// time the DOM is ready, we replace the broken UI with a clear error.
+
+(function(){
+  function showBootFailure(reason){
+    try{
+      // Hide every existing screen so stray HTML-text from a truncated
+      // script block can't bleed through any more.
+      ['screen-login','screen-select','app-header','app-body'].forEach(function(id){
+        var el = document.getElementById(id);
+        if(el) el.style.display = 'none';
+      });
+      var overlay = document.getElementById('__ckyBootFail');
+      if(!overlay){
+        overlay = document.createElement('div');
+        overlay.id = '__ckyBootFail';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:linear-gradient(135deg,#1a1410 0%,#2d2218 40%,#1e1a12 100%);display:flex;align-items:center;justify-content:center;padding:40px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","DM Sans",sans-serif';
+        overlay.innerHTML = '<div style="max-width:480px;text-align:center;color:#f5f0e8">'
+          + '<div style="font-size:48px;margin-bottom:16px">\u26A0</div>'
+          + '<div style="font-size:20px;font-weight:600;margin-bottom:12px">Chanakya couldn\u2019t finish loading</div>'
+          + '<div style="font-size:13px;color:#a09080;line-height:1.5;margin-bottom:24px">The app file didn\u2019t parse correctly in your browser. '
+          + 'This is usually fixed by a reload. If it keeps happening, contact your administrator.</div>'
+          + '<div style="font-size:11px;color:#6a5a48;margin-bottom:24px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">reason: ' + String(reason||'unknown').replace(/[<>&]/g,'') + '</div>'
+          + '<button onclick="location.reload()" style="background:linear-gradient(135deg,#c9a84c,#8b6f47);border:none;color:#fff;font-size:14px;font-weight:600;padding:12px 28px;border-radius:10px;cursor:pointer;font-family:inherit;letter-spacing:.03em">Reload app</button>'
+          + '</div>';
+        document.body.appendChild(overlay);
+      }
+    }catch(e){ /* last-resort; nothing we can do */ }
+  }
+
+  function check(){
+    if(!window.__ckyMainLoaded){
+      showBootFailure('main script block was truncated before completing');
+      return;
+    }
+    if(typeof window.doLogin !== 'function'){
+      showBootFailure('doLogin is not defined');
+      return;
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', check);
+  } else {
+    // DOM already parsed — run after a short tick so the main block's
+    // top-level code has a chance to set __ckyMainLoaded first.
+    setTimeout(check, 0);
+  }
+})();
 </script>
   <!-- ═══ IMPORT MODAL ═══ -->
   <div class="modal-ov" id="importMod" style="z-index:700">

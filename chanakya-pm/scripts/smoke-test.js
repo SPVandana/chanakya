@@ -129,6 +129,18 @@ function checkStaticHtml() {
   const missingFns = criticalFns.filter(fn => !new RegExp(`function\\s+${fn}\\s*\\(|${fn}\\s*=\\s*(async\\s*)?function|${fn}\\s*:\\s*(async\\s*)?function`).test(html) && !new RegExp(`${fn}\\s*=\\s*(async\\s*)?\\(`).test(html));
   if (missingFns.length) fail(`Critical functions not defined: ${missingFns.join(', ')}`);
   else pass(`Critical function definitions found (${criticalFns.length})`);
+
+  // E. Boot-failure canary — a separate <script> block at the end of the
+  //    file that shows a clean error overlay if the main block ever fails
+  //    to load. This is the user-facing safety net for any future HTML
+  //    parser trap that somehow slips past checks A–D.
+  const hasLoadedFlag = /window\.__ckyMainLoaded\s*=\s*true/.test(html);
+  const hasCanaryCheck = /__ckyMainLoaded/.test(html) && /showBootFailure/.test(html);
+  if (!hasLoadedFlag || !hasCanaryCheck) {
+    fail('Boot-failure canary is missing — the recovery overlay for a truncated main script block has been removed. Restore it (search existing history for "__ckyMainLoaded" / "showBootFailure").');
+  } else {
+    pass('Boot-failure canary present (main-script-truncation recovery path intact)');
+  }
 }
 
 // ─── 2. Boot the server ─────────────────────────────────────────────────────
