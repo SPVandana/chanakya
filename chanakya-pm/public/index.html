@@ -1926,6 +1926,7 @@ const Store={
     _scheduleSave();
   },
   setMeta(k,v){ DB.set(k,v); },
+  getMeta(k){ return DB.get(k); },
   flush(){ DB.save(); },
 };
 
