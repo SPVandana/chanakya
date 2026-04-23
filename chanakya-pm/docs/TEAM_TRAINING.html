@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chanakya PM — Team Training Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root{
+    --ink:#1f1a14;
+    --muted:#6b5d4a;
+    --accent:#8b6f47;
+    --gold:#c9a84c;
+    --line:#e4dccd;
+    --surface:#fbf8f1;
+    --danger:#b83733;
+    --success:#4a7c59;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#fff;color:var(--ink);font-family:"DM Sans","Helvetica Neue",Arial,sans-serif;font-size:10.5pt;line-height:1.55;}
+  .cover{
+    page-break-after:always;
+    height:calc(100vh - 40mm);
+    min-height:240mm;
+    display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+    padding:20mm 0;
+    border-top:8px solid var(--gold);
+  }
+  .cover .kicker{font-size:11pt;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:20mm}
+  .cover h1{font-family:"DM Serif Display",Georgia,serif;font-weight:500;font-size:52pt;line-height:1.02;margin:0 0 8mm 0;color:var(--ink);letter-spacing:-.5pt}
+  .cover .sub{font-size:14pt;color:var(--muted);margin-bottom:20mm;max-width:150mm}
+  .cover .meta{margin-top:auto;border-top:1px solid var(--line);padding-top:10mm;font-size:10pt;color:var(--muted);width:100%}
+  .cover .meta strong{color:var(--ink)}
+  h1{font-family:"DM Serif Display",Georgia,serif;font-weight:500;font-size:22pt;margin:18mm 0 6mm;color:var(--ink);border-bottom:2px solid var(--gold);padding-bottom:3mm;page-break-after:avoid}
+  h1:first-of-type{margin-top:0}
+  h2{font-family:"DM Serif Display",Georgia,serif;font-weight:500;font-size:16pt;margin:10mm 0 3mm;color:var(--accent);page-break-after:avoid}
+  h3{font-size:12pt;font-weight:600;margin:6mm 0 2mm;color:var(--ink);page-break-after:avoid}
+  p{margin:0 0 3mm}
+  ul,ol{margin:0 0 3mm 5mm;padding:0}
+  li{margin:0 0 1.5mm;padding:0}
+  code{font-family:"SF Mono","Menlo",Consolas,monospace;font-size:9.5pt;background:var(--surface);padding:.5mm 1.2mm;border-radius:1mm;color:var(--accent)}
+  pre{font-family:"SF Mono","Menlo",Consolas,monospace;font-size:9pt;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--gold);padding:3mm 4mm;border-radius:2mm;line-height:1.4;overflow-x:auto;margin:3mm 0;page-break-inside:avoid}
+  table{width:100%;border-collapse:collapse;margin:3mm 0 5mm;font-size:9.5pt;page-break-inside:avoid}
+  th{text-align:left;background:var(--surface);border-bottom:2px solid var(--accent);padding:2mm 2.5mm;color:var(--ink);font-weight:600;font-size:9.5pt;letter-spacing:.02em}
+  td{border-bottom:1px solid var(--line);padding:2mm 2.5mm;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  strong{color:var(--ink);font-weight:600}
+  em{font-style:italic;color:var(--muted)}
+  blockquote{border-left:3px solid var(--gold);margin:3mm 0;padding:2mm 4mm;background:var(--surface);color:var(--muted);font-style:italic;page-break-inside:avoid}
+  .callout{border:1px solid var(--line);border-left:4px solid var(--gold);background:var(--surface);padding:3mm 4mm;border-radius:2mm;margin:3mm 0;page-break-inside:avoid}
+  .callout strong{color:var(--accent)}
+  .tag{display:inline-block;font-size:8.5pt;font-weight:600;padding:.6mm 2mm;border-radius:2mm;background:var(--surface);color:var(--accent);border:1px solid var(--line);text-transform:uppercase;letter-spacing:.04em}
+  .tag.view{color:#6b5d4a}
+  .tag.edit{color:var(--accent);border-color:var(--accent)}
+  .tag.approve{color:#3a5f8b;border-color:#3a5f8b}
+  .tag.manage{color:var(--danger);border-color:var(--danger)}
+  .toc{margin:5mm 0 10mm;background:var(--surface);padding:6mm;border-left:4px solid var(--gold);border-radius:2mm}
+  .toc h2{margin:0 0 3mm;font-size:13pt;color:var(--ink)}
+  .toc ol{margin:0;padding-left:5mm}
+  .toc li{font-size:10.5pt;margin-bottom:1.5mm}
+  .section{page-break-inside:avoid}
+  .section-break{page-break-before:always}
+  .feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin:3mm 0}
+  .feature-card{border:1px solid var(--line);border-radius:2mm;padding:3mm 4mm;background:#fff;page-break-inside:avoid}
+  .feature-card h3{margin:0 0 2mm;font-size:11pt;color:var(--accent)}
+  .feature-card ul{margin-left:4mm;font-size:9.5pt}
+  .feature-card li{margin-bottom:1mm}
+  .cheat{border:2px solid var(--gold);border-radius:3mm;padding:6mm 8mm;background:var(--surface);margin:5mm 0;page-break-inside:avoid}
+  .cheat h3{margin-top:0;font-family:"DM Serif Display",Georgia,serif;font-weight:500;font-size:14pt;color:var(--accent);text-align:center;border-bottom:1px solid var(--line);padding-bottom:2mm}
+  .cheat dl{margin:0;display:grid;grid-template-columns:50mm 1fr;gap:2mm 4mm;font-size:10pt}
+  .cheat dt{font-weight:600;color:var(--ink)}
+  .cheat dd{margin:0;color:var(--muted)}
+  footer{text-align:center;color:var(--muted);font-size:9pt;border-top:1px solid var(--line);margin-top:10mm;padding-top:3mm}
+  .pagenum{font-size:9pt;color:var(--muted)}
+  .no-break{page-break-inside:avoid}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="cover">
+  <div class="kicker">White Lotus Group · Construction PM</div>
+  <h1>Chanakya<br/>Team Training Guide</h1>
+  <div class="sub">Everything a White Lotus team member needs to get productive on Chanakya in the first 30 minutes — signing in, navigating, daily workflows, and feature reference.</div>
+  <div class="meta">
+    <strong>Live at:</strong> chanakya-pm.onrender.com<br/>
+    <strong>For:</strong> White Lotus project managers, planners, and management<br/>
+    <strong>Admin contact:</strong> Vandana P · vandana.p@whitelotusgroup.in<br/>
+    <strong>Issued:</strong> April 2026
+  </div>
+</section>
+
+<!-- TABLE OF CONTENTS -->
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li>Signing in</li>
+    <li>First two minutes in the app</li>
+    <li>The villa dashboard at a glance</li>
+    <li>Common tasks — step by step</li>
+    <li>Who can do what (permission matrix)</li>
+    <li>Working together — conflicts, auto-save, audit trail</li>
+    <li>Keyboard and mouse shortcuts</li>
+    <li>Complete feature list</li>
+    <li>Troubleshooting</li>
+    <li>Known limitations</li>
+    <li>Support and escalation</li>
+    <li>Daily cheat sheet</li>
+  </ol>
+</nav>
+
+<!-- 1. SIGN IN -->
+<h1>1 &nbsp;Signing in</h1>
+
+<p>You have two ways to sign in. <strong>Google is preferred</strong> — it's the fastest and most secure.</p>
+
+<h2>Option A — Sign in with Google (recommended)</h2>
+<ol>
+  <li>Open <code>https://chanakya-pm.onrender.com</code></li>
+  <li>Click <strong>Sign in with Google</strong></li>
+  <li>Pick your <code>@whitelotusgroup.in</code> work account</li>
+  <li>You're in.</li>
+</ol>
+<p>First-time Google sign-in from <code>@whitelotusgroup.in</code> auto-creates an account with <span class="tag edit">edit</span> permission. Need elevated access? Ping Vandana.</p>
+
+<h2>Option B — Email and password</h2>
+<p>If your account was pre-seeded with a password:</p>
+<ol>
+  <li>Enter your work email</li>
+  <li>Enter the shared default password (ask Vandana)</li>
+  <li>Click <strong>Sign In</strong></li>
+</ol>
+<p>Forgot your password? Email Vandana. Self-reset isn't built in yet.</p>
+
+<h2>Session length</h2>
+<ul>
+  <li>You stay signed in for <strong>7 days</strong></li>
+  <li>A warning banner appears <strong>15 minutes before</strong> expiry so you can save and sign in again without losing work</li>
+  <li>If the session expires mid-edit, you'll see "Your session has expired" and be returned to the login screen</li>
+</ul>
+
+<!-- 2. FIRST TWO MINUTES -->
+<h1>2 &nbsp;First two minutes in the app</h1>
+
+<p>After signing in, you land on the <strong>Select Development</strong> screen.</p>
+<ul>
+  <li><strong>Amanvana</strong> and <strong>Kandhavara</strong> are the two main developments</li>
+  <li>Click <strong>Open Dashboard →</strong> on the one you work with</li>
+  <li>Or click <strong>View All Developments</strong> to see everything</li>
+</ul>
+
+<p>Inside a development you'll see villa cards. Click any villa to open its dashboard.</p>
+
+<div class="callout">
+  <strong>Tip.</strong> The badge next to the Chanakya logo (top-left) shows which development you're in. Click it to go back to the Select Development screen.
+</div>
+
+<!-- 3. DASHBOARD TABS -->
+<h1>3 &nbsp;The villa dashboard at a glance</h1>
+
+<p>Once inside a villa, the interface is organised into tabs:</p>
+
+<table>
+  <thead><tr><th>Tab</th><th>What it shows</th></tr></thead>
+  <tbody>
+    <tr><td><strong>WBS</strong></td><td>The full task table — phases, subphases, and every task</td></tr>
+    <tr><td><strong>Gantt</strong></td><td>Visual timeline with bars, dependencies, critical path</td></tr>
+    <tr><td><strong>Report</strong></td><td>Daily / weekly / monthly progress reports</td></tr>
+    <tr><td><strong>Planner</strong></td><td>Week-by-week task planner</td></tr>
+    <tr><td><strong>Baselines</strong></td><td>Snapshots of schedule versions for comparison</td></tr>
+    <tr><td><strong>Critical Path</strong></td><td>The tasks that determine the project end date</td></tr>
+    <tr><td><strong>Calendar</strong></td><td>Tasks plotted on a calendar grid</td></tr>
+    <tr><td><strong>Resources</strong></td><td>Team and material allocation</td></tr>
+    <tr><td><strong>Costs</strong></td><td>Budget versus actual</td></tr>
+    <tr><td><strong>Approvals</strong></td><td>Items waiting for sign-off</td></tr>
+  </tbody>
+</table>
+
+<p>The left sidebar lists all villas in the development — click any villa name to switch.</p>
+
+<!-- 4. COMMON TASKS -->
+<h1 class="section-break">4 &nbsp;Common tasks — step by step</h1>
+
+<h2>Add a new task</h2>
+<p><em>Requires <span class="tag edit">edit</span> permission</em></p>
+<ol>
+  <li>Open any villa → <strong>WBS</strong> tab</li>
+  <li>Click <strong>+ Add Task</strong> (top-right of the WBS toolbar)</li>
+  <li>Pick task type: group task or subtask</li>
+  <li>Fill in name, dates, phase, status, progress</li>
+  <li>Optionally add predecessors, assignee, cost, notes</li>
+  <li>Click <strong>Save</strong></li>
+</ol>
+<p>The task auto-saves to the server within 1.5 seconds. Other team members will see it on their next refresh.</p>
+
+<h2>Edit a task</h2>
+<ol>
+  <li>Click the task row in the WBS tab</li>
+  <li>The task panel opens on the right</li>
+  <li>Edit any field → changes save automatically</li>
+  <li>Or click the task name to open the full edit modal</li>
+</ol>
+<p><strong>Quick edits from the Gantt:</strong></p>
+<ul>
+  <li><strong>Drag a task bar</strong> left or right to shift its dates (preserves duration)</li>
+  <li>A toast confirms the new dates with an <strong>Undo</strong> button</li>
+</ul>
+
+<h2>Mark a task complete, in-progress, or blocked</h2>
+<ol>
+  <li>Click the task</li>
+  <li>Change the <strong>Status</strong> dropdown</li>
+  <li>If status is <strong>blocked</strong> or <strong>on-hold</strong>, a "Blocking reason" field appears — fill it in so teammates know why</li>
+</ol>
+
+<h2>Delete a task</h2>
+<ol>
+  <li>Click the task → <strong>Delete</strong> button</li>
+  <li>A toast appears with an <strong>Undo</strong> button (6-second window)</li>
+  <li>After 6 seconds the delete is permanent (but still recoverable via the audit log for admins)</li>
+</ol>
+
+<h2>Capture a baseline</h2>
+<p><em>Requires <span class="tag edit">edit</span> or <span class="tag manage">manage</span></em></p>
+<ol>
+  <li>Open a villa → <strong>Baselines</strong> tab</li>
+  <li>Click <strong>Capture New Baseline</strong></li>
+  <li>Give it a name ("Initial Schedule", "Revised Plan v2")</li>
+  <li>Optionally add notes</li>
+  <li>Click <strong>Save</strong></li>
+</ol>
+<p>Baselines are read-only snapshots. Compare any two later to see what changed.</p>
+
+<h2>Import tasks from CSV / Excel</h2>
+<p><em>Requires <span class="tag manage">manage</span> permission</em></p>
+<ol>
+  <li>Click <strong>Import</strong> (top-right, visible only if you have manage)</li>
+  <li>Choose <strong>By Phase</strong>, <strong>By Villa</strong>, or <strong>WL Master Schedule</strong> mode</li>
+  <li>Upload the file</li>
+  <li>Map columns if prompted</li>
+  <li>Preview → Import</li>
+</ol>
+
+<h2>Export data</h2>
+<p><em>Requires <span class="tag manage">manage</span> permission</em></p>
+<ol>
+  <li>Click <strong>Export</strong> (top-right)</li>
+  <li>A JSON backup file downloads</li>
+  <li>Every export is logged to the audit trail automatically</li>
+</ol>
+
+<h2>Request or approve an approval</h2>
+<ol>
+  <li>Any user can <strong>request</strong> an approval from a task's panel</li>
+  <li>Users with <span class="tag approve">approve</span> permission (Pavan, Chetan, Vandana) see the Approvals tab with pending items</li>
+  <li>Approve or reject with a comment</li>
+</ol>
+
+<h2>View the audit log</h2>
+<p><em>Requires <span class="tag manage">manage</span> permission</em></p>
+<ol>
+  <li>Click the 📋 <strong>Audit Log</strong> button (top-right)</li>
+  <li>See the last 500 actions: who changed what, when</li>
+</ol>
+
+<!-- 5. PERMISSIONS -->
+<h1 class="section-break">5 &nbsp;Who can do what</h1>
+
+<table>
+  <thead><tr><th>Permission</th><th>What it unlocks</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag view">view</span></td><td>Read all villas, tasks, reports. No editing buttons.</td></tr>
+    <tr><td><span class="tag edit">edit</span></td><td>Add, edit, delete tasks. Drag Gantt bars. Update progress.</td></tr>
+    <tr><td><span class="tag approve">approve</span></td><td>See Approvals panel. Approve or reject requests.</td></tr>
+    <tr><td><span class="tag manage">manage</span></td><td>Create new villas, Import, Export, Add Development, see Audit Log, open the ⚙ Manage panel.</td></tr>
+  </tbody>
+</table>
+<p>Permissions are independent — a user can have any combination.</p>
+
+<h2>Current team roster</h2>
+<table>
+  <thead><tr><th>Name</th><th>Role</th><th>Permissions</th></tr></thead>
+  <tbody>
+    <tr><td>Admin</td><td>Administrator</td><td>all</td></tr>
+    <tr><td>Vandana P</td><td>Project Manager</td><td>edit, approve, manage</td></tr>
+    <tr><td>Praveer C</td><td>Planner</td><td>edit, manage</td></tr>
+    <tr><td>Vaishali P</td><td>Project Manager</td><td>edit, manage</td></tr>
+    <tr><td>Shraddha B</td><td>Project Manager</td><td>edit, manage</td></tr>
+    <tr><td>Dinesh</td><td>Project Manager</td><td>edit, manage</td></tr>
+    <tr><td>Madhavarajan S</td><td>Project Manager</td><td>manage</td></tr>
+    <tr><td>Pavan</td><td>Project Manager</td><td>approve</td></tr>
+    <tr><td>Chetan</td><td>Project Manager</td><td>approve</td></tr>
+    <tr><td>Stanly John</td><td>Project Manager</td><td>view</td></tr>
+    <tr><td>Product Analyst</td><td>Analyst</td><td>view</td></tr>
+  </tbody>
+</table>
+<p>Anyone else from <code>@whitelotusgroup.in</code> who signs in via Google gets <strong>edit</strong> access automatically. Contact Vandana if you need elevated permissions.</p>
+
+<!-- 6. WORKING TOGETHER -->
+<h1>6 &nbsp;Working together</h1>
+
+<h2>Auto-save and conflicts</h2>
+<ul>
+  <li>Every change you make auto-saves every ~1.5 seconds</li>
+  <li>Other team members see your changes on reload or next save</li>
+  <li>If two people edit the same villa at the same time, whoever saves second sees: <em>"Another user saved changes after you last synced — reload to see the latest, then retry your edit"</em></li>
+  <li>Click <strong>Reload</strong> — your unsaved change needs to be redone, but nobody's work is silently lost</li>
+</ul>
+
+<h2>Offline or bad network</h2>
+<ul>
+  <li>If the connection drops, a yellow banner appears: <em>"Your changes aren't syncing to the server. Retrying…"</em></li>
+  <li>The app retries automatically every 5 seconds</li>
+  <li>If saves keep failing for 30+ seconds, the banner turns red and asks you to stop editing until the connection returns</li>
+  <li>Click <strong>Retry now</strong> to force a retry, or <strong>Reload</strong> to start fresh</li>
+</ul>
+
+<h2>What's logged</h2>
+<p>Every create, edit, delete, reschedule, import, export, and approval is logged to the audit trail with your name and timestamp. Admins can review the log at any time via the 📋 Audit Log button.</p>
+
+<!-- 7. SHORTCUTS -->
+<h1>7 &nbsp;Keyboard and mouse shortcuts</h1>
+<table>
+  <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
+  <tbody>
+    <tr><td>Save task modal</td><td><strong>Enter</strong> (inside a text field)</td></tr>
+    <tr><td>Cancel modal</td><td><strong>Escape</strong></td></tr>
+    <tr><td>Quick-edit (WBS)</td><td>Click a task cell</td></tr>
+    <tr><td>Reschedule on Gantt</td><td>Drag the bar</td></tr>
+    <tr><td>Zoom Gantt</td><td>Zoom dropdown (Week / Month / Quarter)</td></tr>
+    <tr><td>Hard-reload (fixes most display bugs)</td><td><strong>Cmd+Shift+R</strong> (Mac) · <strong>Ctrl+Shift+R</strong> (Win)</td></tr>
+    <tr><td>Open DevTools console (for bug reports)</td><td><strong>Cmd+Option+J</strong> (Mac) · <strong>F12</strong> (Win)</td></tr>
+  </tbody>
+</table>
+
+<!-- 8. FEATURE LIST -->
+<h1 class="section-break">8 &nbsp;Complete feature list</h1>
+
+<p>A full inventory of what Chanakya can do today. Features marked <em>admin-only</em> require <span class="tag manage">manage</span> permission.</p>
+
+<div class="feature-grid">
+  <div class="feature-card">
+    <h3>Multi-development structure</h3>
+    <ul>
+      <li>Multiple developments (Amanvana, Kandhavara, and any you add)</li>
+      <li>Per-development villa cards with progress, phase, risk indicators</li>
+      <li>Development-level stats: total units, on track, at risk</li>
+      <li>"View All Developments" cross-development roll-up</li>
+      <li>Add new developments <em>(admin-only)</em></li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Villa / project management</h3>
+    <ul>
+      <li>Create, edit, delete villas <em>(admin-only)</em></li>
+      <li>Status tracking: on-track · at-risk · delayed · on-hold</li>
+      <li>Auto-computed progress from tasks</li>
+      <li>Per-villa contractor, PM, SS assignment</li>
+      <li>Budget, plot area, notes fields</li>
+      <li>Status badge tooltips explaining how status was derived</li>
+      <li>Copy villa task structure from one villa to another</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Task management</h3>
+    <ul>
+      <li>Full CRUD with 6-second undo on delete</li>
+      <li>Fields: name, dates, status, progress, priority, assignee, cost, constraint type, inspection required, milestone flag, blocking reason, notes</li>
+      <li>Phase / subphase grouping with collapsible sections</li>
+      <li>Bulk selection and multi-task actions</li>
+      <li>Drag to reschedule on the Gantt (preserves duration)</li>
+      <li>Predecessor dependencies: FS, SS, FF, SF with lag / lead</li>
+      <li>Auto-computed parent group dates and progress</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Gantt chart</h3>
+    <ul>
+      <li>Zoom: Week · Month · Quarter</li>
+      <li>Dependency arrows between tasks</li>
+      <li>Critical path highlighting</li>
+      <li>Critical-only and milestones-only filters</li>
+      <li>Baseline overlay (compare current vs captured plan)</li>
+      <li>Drag-to-reschedule with undo</li>
+      <li>Print Gantt to styled PDF via the browser</li>
+      <li>Rendered for 200+ task projects with debounce</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Work Breakdown Structure (WBS)</h3>
+    <ul>
+      <li>Collapsible phase / subphase tree</li>
+      <li>Sortable columns</li>
+      <li>Persistent filters for quick search (status, phase, assignee)</li>
+      <li>Field validation with red-highlight and shake animation</li>
+      <li>Status dropdown with explanatory tooltips</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Baselines</h3>
+    <ul>
+      <li>Capture a snapshot of the current schedule any time</li>
+      <li>Multiple baselines per villa</li>
+      <li>Delete baselines (with confirmation)</li>
+      <li>Compare two baselines side-by-side with variance</li>
+      <li>Baseline overlay on the Gantt</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Critical path analysis</h3>
+    <ul>
+      <li>Automatic critical path computation from predecessors</li>
+      <li>Dedicated Critical Path tab</li>
+      <li>Total float / slack shown per task</li>
+      <li>Critical tasks highlighted in red on Gantt</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Approvals workflow</h3>
+    <ul>
+      <li>Request approval from any task's panel</li>
+      <li>Approvals queue for approvers</li>
+      <li>Approve or reject with a comment</li>
+      <li>Approval status shown on the task</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Resources</h3>
+    <ul>
+      <li>Team roster with role, email, phone, hourly rate, availability</li>
+      <li>Work vs material resource types</li>
+      <li>Per-resource colour coding on Gantt</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Planner</h3>
+    <ul>
+      <li>Weekly and monthly views</li>
+      <li>Drag-and-drop task assignment</li>
+      <li>Per-week load visibility</li>
+      <li>State persists across sessions</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Today's Tasks panel</h3>
+    <ul>
+      <li>Tasks due today across every villa</li>
+      <li>Tomorrow's Tasks preview</li>
+      <li>Upcoming Tasks horizon</li>
+      <li>Inline quick-edit popup</li>
+      <li>Progress bar and save indicator</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Reports</h3>
+    <ul>
+      <li>Daily, weekly, monthly progress reports</li>
+      <li>CSV export per view</li>
+      <li>Full JSON backup / import</li>
+      <li>Printable report window</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Site Plan (Amanvana)</h3>
+    <ul>
+      <li>Live interactive villa master plan</li>
+      <li>Status colour-coding per villa</li>
+      <li>Reads live data from parent Store</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Costs tracking</h3>
+    <ul>
+      <li>Villa-level budget vs actual</li>
+      <li>Per-task cost entry</li>
+      <li>Contingency percentage</li>
+      <li>Currency select (INR / USD / EUR / GBP)</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Calendar view</h3>
+    <ul>
+      <li>Tasks plotted on a monthly calendar grid</li>
+      <li>Colour-coded by status</li>
+      <li>Click any day to see tasks on that date</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Data import</h3>
+    <ul>
+      <li>CSV and Excel upload</li>
+      <li>Three modes: By Phase, By Villa, WL Master Schedule</li>
+      <li>Column mapper with preview</li>
+      <li>Optional dependency-mapping upload</li>
+      <li>Safe restore / rollback pane</li>
+      <li><em>Admin-only</em></li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Audit log</h3>
+    <ul>
+      <li>Every create, edit, delete, reschedule, import, export, login, approval logged automatically</li>
+      <li>User name, action, entity, timestamp on every row</li>
+      <li>Last 500 entries displayed; older rolls off</li>
+      <li><em>Admin-only viewer</em></li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Security &amp; authentication</h3>
+    <ul>
+      <li>JWT-based auth (7-day session, 15-min expiry warning)</li>
+      <li>bcrypt password hashing</li>
+      <li>Google Sign-In with domain allowlist (@whitelotusgroup.in auto-provisioned)</li>
+      <li>Role-based permissions: view · edit · approve · manage</li>
+      <li>Rate-limited login (30 per IP, 10 per email per 15 min) to blunt brute-force</li>
+      <li>XSS input filter on all user-entered names</li>
+      <li>Payload shape validation on every save</li>
+      <li>HTTPS-only (via Render)</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>Reliability &amp; resilience</h3>
+    <ul>
+      <li>Auto-save every 1.5 seconds with optimistic locking (409 conflict detection → no silent data loss)</li>
+      <li>Offline banner with automatic retry every 5 seconds</li>
+      <li>Critical "stop editing" warning if offline for 30+ seconds</li>
+      <li>Boot-failure canary overlay catches any load issue and offers a clean reload</li>
+      <li>4-layer pre-deploy smoke test: blocks broken code from reaching production</li>
+      <li>Audit trail means any delete is recoverable</li>
+    </ul>
+  </div>
+  <div class="feature-card">
+    <h3>UX polish</h3>
+    <ul>
+      <li>Warm brown-and-gold design system (White Lotus brand-aligned)</li>
+      <li>Toast notifications with undo for destructive actions</li>
+      <li>Real-time field validation with visual feedback</li>
+      <li>Status-badge tooltips explaining how each status was derived</li>
+      <li>Persistent WBS filters across tab switches</li>
+      <li>Keyboard-friendly modals (Enter to save, Escape to cancel)</li>
+      <li>Smooth transitions between screens</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 9. TROUBLESHOOTING -->
+<h1 class="section-break">9 &nbsp;Troubleshooting</h1>
+
+<h2>"I can't log in"</h2>
+<ul>
+  <li>Double-check you're at <code>https://chanakya-pm.onrender.com</code></li>
+  <li>Try Google sign-in if password fails</li>
+  <li>If you see "Chanakya couldn't finish loading", click <strong>Reload app</strong>. If it keeps happening, send a screenshot to Vandana.</li>
+</ul>
+
+<h2>"Everything looks broken / raw code on screen"</h2>
+<p>Hard-reload (<strong>Cmd+Shift+R</strong> on Mac, <strong>Ctrl+Shift+R</strong> on Windows). That clears the cached version. If still broken, report to Vandana.</p>
+
+<h2>"The screen keeps saying 'Another user saved'"</h2>
+<p>Someone else is editing the same villa. Click <strong>Reload</strong>, then redo your edit. If this happens repeatedly, coordinate with the other person in Slack to avoid stepping on each other's changes.</p>
+
+<h2>"I don't see the ⚙ Manage / Import / + New Villa buttons"</h2>
+<p>You don't have <span class="tag manage">manage</span> permission. That's expected for most users. Ask Vandana if you need it.</p>
+
+<h2>"Gantt chart is slow"</h2>
+<p>Try switching the zoom from <strong>Week</strong> to <strong>Month</strong> or <strong>Quarter</strong> — fewer columns means faster rendering.</p>
+
+<h2>"I accidentally deleted something"</h2>
+<p>If within the last 6 seconds, the toast has an <strong>Undo</strong> button. If longer, ping Vandana — she can restore from the audit log.</p>
+
+<!-- 10. KNOWN LIMITATIONS -->
+<h1>10 &nbsp;Known limitations</h1>
+<p>These are on the roadmap but not built yet:</p>
+<ul>
+  <li><strong>Mobile and tablet layout</strong> — desktop / laptop only for now</li>
+  <li><strong>Password self-reset</strong> — email Vandana if you forget yours</li>
+  <li><strong>Photo / document attachments on tasks</strong> — use shared drive or email for now</li>
+  <li><strong>Realtime live updates</strong> — you see other people's changes on reload or next save, not instantly. Usually no more than a couple of seconds' delay.</li>
+  <li><strong>Bulk task editing</strong> — one task at a time for most fields (except Gantt drag for date shifts)</li>
+</ul>
+
+<!-- 11. SUPPORT -->
+<h1>11 &nbsp;Support and escalation</h1>
+<table>
+  <thead><tr><th>Issue</th><th>Contact</th></tr></thead>
+  <tbody>
+    <tr><td>Can't sign in</td><td>Vandana P</td></tr>
+    <tr><td>Need edit / approve / manage permission</td><td>Vandana P</td></tr>
+    <tr><td>Found a bug</td><td>Vandana P — include a screenshot and DevTools Console output (<strong>Cmd+Option+J</strong> → Console tab)</td></tr>
+    <tr><td>Lost data or accidental deletion</td><td>Vandana P</td></tr>
+    <tr><td>Feature request</td><td>Vandana P</td></tr>
+  </tbody>
+</table>
+
+<!-- 12. CHEAT SHEET -->
+<h1 class="section-break">12 &nbsp;Daily cheat sheet</h1>
+
+<div class="cheat">
+  <h3>Chanakya PM — Daily cheat sheet</h3>
+  <dl>
+    <dt>Sign in</dt><dd>chanakya-pm.onrender.com → Sign in with Google (work email)</dd>
+    <dt>Pick development</dt><dd>Amanvana · Kandhavara · View All</dd>
+    <dt>Switch development</dt><dd>Click ← badge next to Chanakya logo</dd>
+    <dt>Add a task</dt><dd>Villa → WBS → + Add Task</dd>
+    <dt>Edit a task</dt><dd>Click the task row → edit fields → auto-saves</dd>
+    <dt>Reschedule</dt><dd>Gantt → drag the bar left or right</dd>
+    <dt>Undo a delete</dt><dd>Click Undo in the toast (6-second window)</dd>
+    <dt>Capture baseline</dt><dd>Baselines tab → Capture New Baseline</dd>
+    <dt>Sign out</dt><dd>Top-right → Sign out</dd>
+    <dt>Save conflict?</dt><dd>Click "Reload" in the banner, redo your edit</dd>
+    <dt>Anything stuck?</dt><dd>Hard-reload (Cmd+Shift+R), then message Vandana</dd>
+  </dl>
+</div>
+
+<footer>
+  Chanakya PM · White Lotus Group · Internal use only · Issued April 2026 · Maintained by Vandana P
+</footer>
+
+</body>
+</html>
