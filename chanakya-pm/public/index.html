@@ -9649,9 +9649,9 @@ function printGantt(){
       <span>Printed ${printDate}</span>
     </div>
     <div style="overflow:auto;padding:0 8px 16px">${gc.innerHTML}</div>
-    <script>
+    <${'script'}>
       document.fonts.ready.then(()=>{ window.focus(); window.print(); });
-    </script>
+    <\/${'script'}>
   </body></html>`);
   win.document.close();
 }
