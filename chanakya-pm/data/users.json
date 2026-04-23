@@ -27,7 +27,7 @@
     "id": "u4",
     "email": "praveer.c@whitelotusgroup.in",
     "name": "Praveer C",
-    "role": "Project Manager",
+    "role": "Planner",
     "permissions": "edit,manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
@@ -77,6 +77,14 @@
     "name": "Madhavarajan S",
     "role": "Project Manager",
     "permissions": "manage",
+    "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
+  },
+  {
+    "id": "u11",
+    "email": "vaishali.p@whitelotusgroup.in",
+    "name": "Vaishali P",
+    "role": "Project Manager",
+    "permissions": "edit,manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   }
 ]
