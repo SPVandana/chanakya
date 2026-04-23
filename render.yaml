@@ -3,7 +3,7 @@ services:
     name: chanakya-pm
     runtime: node
     rootDir: chanakya-pm            # Express app lives in the chanakya-pm/ subdirectory
-    buildCommand: npm install && npm run seed
+    buildCommand: npm install && npm run seed && npm run smoke-test
     startCommand: node server.js
     # Auto-spin a disposable preview environment for every pull request.
     # Render mints a fresh SQLite DB per preview (disks are not cloned),

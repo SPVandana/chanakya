@@ -24,7 +24,7 @@ router.get('/data', requireAuth, (_req, res) => {
     res.json(data);
   } catch (e) {
     console.error('[GET /api/data]', e.message);
-    res.status(500).json({ error: 'Could not read project data' });
+    return res.status(500).json({ error: 'Could not read project data' });
   }
 });
 
@@ -56,7 +56,7 @@ router.put('/backup', requireAuth, (req, res) => {
       });
     }
     console.error('[PUT /api/backup]', e.message);
-    res.status(500).json({ error: 'Could not write backup data' });
+    return res.status(500).json({ error: 'Could not write backup data' });
   }
 });
 
@@ -70,7 +70,7 @@ router.get('/export', requireAuth, (_req, res) => {
     res.send(JSON.stringify(data, null, 2));
   } catch (e) {
     console.error('[GET /api/export]', e.message);
-    res.status(500).json({ error: 'Could not generate export' });
+    return res.status(500).json({ error: 'Could not generate export' });
   }
 });
 

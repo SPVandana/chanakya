@@ -1990,7 +1990,7 @@ function _saveNow(){
   clearTimeout(_saveTimer);
   clearTimeout(_saveState.retryTimer);
   const payload=_buildSavePayload();
-  fetch(CKY_API+'/api/backup',{method:'PUT',headers:_authHdr(),body:JSON.stringify(payload)})
+  fetch(CKY_API+'/api/backup',{method:'PUT',headers:_authHdr(),body:JSON.stringify(payload),signal: AbortSignal.timeout(15000)})
     .then(r=>{
       if(r.status===401){ _clearToken(); doLogout(); return; }
       if(r.status===409){
@@ -6817,6 +6817,7 @@ function _logAudit(action, entityType, entityId, entityName){
     method:'POST',
     headers:_authHdr(),
     body:JSON.stringify({action,entityType,entityId:entityId||'',entityName:entityName||''}),
+    signal: AbortSignal.timeout(5000),
   }).catch(()=>{}); // ignore network errors silently
 }
 
@@ -7652,7 +7653,7 @@ async function openAuditLog(){
   body.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading…</div>';
   if(!CKY_API){body.innerHTML='<div style="padding:20px;color:var(--text-muted);font-size:12px">Audit log requires server mode.</div>';return;}
   try{
-    const res=await fetch(CKY_API+'/api/audit',{headers:{'Authorization':'Bearer '+_getToken()}});
+    const res=await fetch(CKY_API+'/api/audit',{headers:{'Authorization':'Bearer '+_getToken()},signal: AbortSignal.timeout(8000)});
     if(!res.ok){body.innerHTML=`<div style="padding:20px;color:var(--danger);font-size:12px">Error: ${res.status}</div>`;return;}
     const rows=await res.json();
     if(!rows.length){body.innerHTML='<div style="padding:20px;color:var(--text-muted);font-size:12px">No audit entries yet.</div>';return;}
@@ -13931,10 +13932,13 @@ async function doLogin(){
 
   // ── Server mode: backend authentication ────────────────────────────────────
   try{
+    // 10s timeout — long enough for Render cold starts (~7s) but short enough
+    // that users on broken networks get a clear error instead of a frozen button.
     const res = await fetch(CKY_API+'/api/auth/login',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email, password:pass})
+      body:JSON.stringify({email, password:pass}),
+      signal: AbortSignal.timeout(10000),
     });
     const data = await res.json();
     if(!res.ok){
@@ -14019,7 +14023,8 @@ async function _handleGoogleToken(tokenResponse){
     const res=await fetch(CKY_API+'/api/auth/google',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({access_token:tokenResponse.access_token})
+      body:JSON.stringify({access_token:tokenResponse.access_token}),
+      signal: AbortSignal.timeout(10000),
     });
     const data=await res.json();
     if(!res.ok){
