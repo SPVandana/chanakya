@@ -6816,7 +6816,7 @@ function syncProjStatus(pid){
   if(!pid)return;
   const ts=Store.getTasksByProject(pid).filter(t=>!t.isGroupHeader);
   if(!ts.length)return;
-  const today=new Date().toISOString().slice(0,10);
+  const today=_todayISO();
   const allDone=ts.every(t=>t.status==='completed'||t.progress>=100);
   const anyStarted=ts.some(t=>(t.progress||0)>0||t.status==='in-progress'||t.status==='completed');
   const hasBlocked=ts.some(t=>t.status==='blocked');
@@ -6844,7 +6844,7 @@ function syncProjStatus(pid){
 function _statusTooltip(pid){
   const ts=Store.getTasksByProject(pid).filter(t=>!t.isGroupHeader);
   if(!ts.length)return'No tasks — status not yet derived';
-  const today=new Date().toISOString().slice(0,10);
+  const today=_todayISO();
   const total=ts.length;
   const done=ts.filter(t=>t.status==='completed').length;
   const ip=ts.filter(t=>t.status==='in-progress').length;
@@ -6927,7 +6927,7 @@ function renderStats(){
     </div>`).join('')+`</div>`;
 
   // Alerts strip
-  const today=new Date().toISOString().slice(0,10);
+  const today=_todayISO();
   const flatTasks=villas.flatMap(p=>(tasksAll[p.id]||[]).map(t=>({...t,_pid:p.id})));
   const overdueTasks=flatTasks.filter(t=>t.endDate&&t.endDate<today&&t.status!=='completed');
   const blockedPids=new Set(flatTasks.filter(t=>t.status==='blocked').map(t=>t._pid));
@@ -6949,7 +6949,7 @@ function renderTodaysTasks(){
   const conSel=$('tt-contractor');
   if(!dateInp||!body||!conSel)return;
 
-  const todayStr=new Date().toISOString().slice(0,10);
+  const todayStr=_todayISO();
 
   // Allow past and future dates — useful for planning ahead
   if(!dateInp.value)dateInp.value=todayStr;
@@ -7220,7 +7220,7 @@ function renderRangeView(fromDate,toDate,mode){
 function ttDownload(mode){
   var fromDate,toDate,label;
   if(mode==='daily'){
-    fromDate=$('tt-date')?.value||new Date().toISOString().slice(0,10);
+    fromDate=$('tt-date')?.value||_todayISO();
     toDate=fromDate;
     label='Daily';
   } else if(mode==='weekly'){
@@ -7357,8 +7357,10 @@ function renderGrid(){
     const phaseKeys=Object.keys(phases).sort((a,b)=>a==='Infrastructure'?1:b==='Infrastructure'?-1:a.localeCompare(b));
     const villaPhaseKeys=phaseKeys.filter(k=>k!=='Infrastructure');
     const allVillas=Object.values(phases).flat();
-    const villaCount=allVillas.filter(p=>!['landscape','waterbody','development'].includes(p.type)).length;
-    const devTasks=allVillas.flatMap(p=>tasksAll[p.id]||[]);
+    // Exclude phase-summary placeholders along with infra types — they're
+    // synthetic UI rows, not real villas with countable tasks.
+    const villaCount=allVillas.filter(p=>!['landscape','waterbody','development','phase-summary'].includes(p.type)).length;
+    const devTasks=allVillas.filter(p=>p.type!=='phase-summary').flatMap(p=>tasksAll[p.id]||[]);
     const devPct=_wPct(devTasks);
     // devBudget removed: no budget data yet
     const devColor=devColors[devName]||'#8b6f47';
@@ -7438,7 +7440,7 @@ function renderGrid(){
             return `<div class="vc s-${_dSt}${isMockup?' mockup-card':''}" onclick="openProj('${p.id}')" style="${isInfra?'border-left:3px solid '+tClr[p.type]+';':''}">
               <div class="vc-head">
                 <div>
-                  <div class="vc-name">${p.name}</div>
+                  <div class="vc-name">${escHtml(p.name)}</div>
                   ${(p.contractorName||p.zone)?`<div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap">
                     ${p.zone?`<span style="font-size:9px;padding:1px 6px;background:#3a5f8b18;color:#3a5f8b;border:1px solid #3a5f8b30;border-radius:3px;font-weight:600">${p.zone}</span>`:''}
                     ${p.contractorName?`<span style="font-size:9px;padding:1px 6px;background:#8b6f4718;color:#8b6f47;border:1px solid #8b6f4730;border-radius:3px;font-weight:600">${p.contractorName}</span>`:''}
@@ -7460,7 +7462,7 @@ function renderGrid(){
                 let _projEnd=(_currentUser&&_currentUser.role==='admin'&&p.projectedEnd)?p.projectedEnd:'';
                 if(!_projEnd){
                   if(pct>0&&_actS){
-                    const _today=new Date().toISOString().slice(0,10);
+                    const _today=_todayISO();
                     const _el=Math.max(1,Math.round((new Date(_today)-new Date(_actS+'T00:00:00'))/(1000*60*60*24)));
                     const _tot=Math.round(_el*100/pct);
                     const _pd=new Date(_actS+'T00:00:00');_pd.setDate(_pd.getDate()+_tot);
@@ -7649,7 +7651,7 @@ function renderDetStats(){
   let projEnd=(_currentUser&&_currentUser.role==='admin'&&p.projectedEnd)?p.projectedEnd:'';
   if(!projEnd){
     if(pct>0&&actStart){
-      const today=new Date().toISOString().slice(0,10);
+      const today=_todayISO();
       const elapsed=Math.max(1,Math.round((new Date(today)-new Date(actStart+'T00:00:00'))/(1000*60*60*24)));
       const totalDays=Math.round(elapsed*100/pct);
       const projDate=new Date(actStart+'T00:00:00');
@@ -7920,7 +7922,7 @@ function renderWBS(){
 
   const scl={'not-started':'var(--text-light)','in-progress':'var(--blue)','completed':'var(--success)','blocked':'var(--danger)','on-hold':'#6b4a8b'};
   const si={'not-started':'○','in-progress':'◑','completed':'●','blocked':'✕','on-hold':'⏸'};
-  const today=new Date().toISOString().split('T')[0];
+  const today=_todayISO();
   const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}):'-';
   let html='';
 
@@ -8123,7 +8125,7 @@ function delTask(id){
   if(!rs.ok){if(rs.error)toast(rs.error,'error');return;}
   renderWBS();renderDetStats();renderStats();
   _logAudit('delete','task',id,task.name);
-  toast('Task deleted','',6000,{label:'Undo',fn:()=>{
+  toast('Task deleted','',20000,{label:'Undo',fn:()=>{
     const cur=Store.getTasksByProject(pid);
     cur.splice(Math.min(idx,cur.length),0,task);
     Store.saveProjectTasks(pid,cur);Store.flush();
@@ -8140,7 +8142,7 @@ function delPhaseGroup(phId){
   Store.saveProjectTasks(S.proj.id,remaining);Store.flush();
   renderWBS();renderDetStats();renderStats();
   const pid=S.proj.id;
-  toast(`Group deleted (${members.length} task${members.length!==1?'s':''})`, '', 6000, {label:'Undo', fn:()=>{
+  toast(`Group deleted (${members.length} task${members.length!==1?'s':''})`, '', 20000, {label:'Undo', fn:()=>{
     Store.saveProjectTasks(pid,savedTs);Store.flush();
     renderWBS();renderDetStats();renderStats();
     toast('Group restored','success');
@@ -8232,7 +8234,7 @@ function openTP(id){
       const pstLbl={'not-started':'Not Started','in-progress':'In Progress','completed':'Done','blocked':'Blocked','on-hold':'On Hold'}[pst]||pst;
       return `<li style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 8px;background:rgba(58,95,139,.06);border-radius:5px;margin-bottom:3px;cursor:pointer" onclick="openTP('${p.id}')">
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</div>
+          <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.name)}</div>
           <div style="font-size:10px;color:${pstClr}">${pstLbl}</div>
         </div>
         <span style="font-size:10px;color:var(--text-light)">→</span>
@@ -8396,6 +8398,19 @@ function copyVillaTasks(){
   const targetPid=S.proj.id;
   const sourceTasks=Store.getTasksByProject(sourcePid);
   if(!sourceTasks.length)return toast('Source villa has no tasks','error');
+  const existing=Store.getTasksByProject(targetPid).filter(t=>!t.isGroupHeader);
+  // Explicit confirm if the target villa already has tasks. Without this the
+  // operation silently replaces real progress data with fresh "not-started"
+  // copies — undo exists, but the toast can be missed in a busy session.
+  if(existing.length){
+    const sourceName=Store.getProjects()[sourcePid]?.name||sourcePid;
+    const ok=confirm(
+      `${S.proj.name} already has ${existing.length} task${existing.length===1?'':'s'}.\n\n`+
+      `Copying from ${sourceName} will REPLACE all of them with ${sourceTasks.length} fresh tasks (progress and status reset).\n\n`+
+      `You'll have an Undo button for 20 seconds afterwards. Continue?`
+    );
+    if(!ok)return;
+  }
   // Deep clone with new IDs; reset progress/status/actual dates; remap predecessors
   const idMap={};
   const cloned=sourceTasks.map(t=>{
@@ -8407,13 +8422,12 @@ function copyVillaTasks(){
   cloned.forEach(t=>{
     if(t.predecessors)t.predecessors=t.predecessors.map(p=>idMap[p]||p).filter(Boolean);
   });
-  const existing=Store.getTasksByProject(targetPid);
-  const snapshot=[...existing.map(t=>({...t}))]; // snapshot for undo
+  const snapshot=[...Store.getTasksByProject(targetPid).map(t=>({...t}))]; // snapshot for undo
   Store.saveProjectTasks(targetPid,cloned);Store.flush();
   closeMod('copyTasksMod');
   renderWBS();renderDetStats();syncProjStatus(targetPid);
   _logAudit('copy-tasks','project',targetPid,S.proj.name);
-  toast(`${cloned.length} tasks copied from ${Store.getProjects()[sourcePid]?.name||sourcePid}`,'success',6000,{label:'Undo',fn:()=>{
+  toast(`${cloned.length} tasks copied from ${Store.getProjects()[sourcePid]?.name||sourcePid}`,'success',20000,{label:'Undo',fn:()=>{
     Store.saveProjectTasks(targetPid,snapshot);Store.flush();
     renderWBS();renderDetStats();
     toast('Reverted to original tasks','success');
@@ -8456,7 +8470,7 @@ function _tmSetMode(mode){
   const sl=$('tm-start-lbl'),el=$('tm-end-lbl');
   const aRow=$('tm-actual-dates-row');
   const phRow=$('tm-phase-row');
-  const today=new Date().toISOString().split('T')[0];
+  const today=_todayISO();
   const minDate=new Date();minDate.setDate(minDate.getDate()-14);
   const minISO=minDate.toISOString().split('T')[0];
   if(mode==='add'){
@@ -8816,7 +8830,11 @@ function _validateTaskData(task){
   return{ok:errors.length===0,errors};
 }
 
-function _todayISO(){return new Date().toISOString().split('T')[0];}
+// Returns today's date in the user's LOCAL timezone (YYYY-MM-DD).
+// Previously used `_todayISO()` which is UTC —
+// for the IST team this returned yesterday's date between 00:00 and 05:30.
+// 'en-CA' locale conveniently formats dates as YYYY-MM-DD.
+function _todayISO(){return new Date().toLocaleDateString('en-CA');}
 function deriveStatusFromProgress(progress){
   const p=Math.min(100,Math.max(0,parseInt(progress)||0));
   if(p===100)return'completed';
@@ -9421,7 +9439,7 @@ function _renderGanttNow(){
   }
 
   const wkLinesHtml=wkTicks.map(w=>`<div style="position:absolute;top:0;bottom:0;width:1px;background:var(--border);opacity:.5;left:${w.x}px"></div>`).join('');
-  const todayX=toX(new Date().toISOString().split('T')[0]);
+  const todayX=toX(_todayISO());
   const todayLine=`<div style="position:absolute;top:0;bottom:0;width:2px;background:#e05555;opacity:.75;z-index:5;left:${todayX}px" title="Today"></div>`;
 
   // Group tasks by phase
@@ -9473,7 +9491,7 @@ function _renderGanttNow(){
         const isCrit=critIds.has(t.id);
         const barClr=(showCP&&isCrit)?'#c04040':clr;
         const progW=Math.max(0,Math.round(w*(t.progress||0)/100));
-        const today=new Date().toISOString().split('T')[0];
+        const today=_todayISO();
         const isOv=t.endDate&&t.endDate<today&&t.status!=='completed';
         const stDot={'not-started':'#c0bab0','in-progress':clr,'completed':'#4a7c59','blocked':'#c04040','on-hold':'#9a7abf'}[t.status]||'#c0bab0';
 
@@ -9505,7 +9523,7 @@ function _renderGanttNow(){
         labH+=`<div style="height:${rH}px;padding:0 6px 0 6px;display:flex;align-items:center;border-bottom:1px solid var(--border);border-left:${labBorderLeft};font-size:10px;cursor:pointer;color:${isDimmed?'var(--text-light)':'var(--text-muted)'};gap:5px;transition:.1s;overflow:hidden;background:${labBg};opacity:${isDimmed?0.4:1}" onmouseover="this.style.background='var(--accent-pale)'" onmouseout="this.style.background='${labBg}'" onclick="ganttClickTask('${t.id}')">
           <span style="font-size:8px;color:${isDimmed?'var(--text-light)':'var(--text-muted)'};font-family:'DM Mono',monospace;min-width:18px;flex-shrink:0;font-weight:${isSelected?700:400}">${rowNum}</span>
           <span style="width:6px;height:6px;border-radius:50%;background:${stDot};flex-shrink:0;display:inline-block"></span>
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:${isSelected?600:400}">${t.name}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:${isSelected?600:400}">${escHtml(t.name)}</span>
           ${relBadge}
           ${(showCP&&isCrit)?'<span style="font-size:7px;color:#c04040;flex-shrink:0;font-weight:700;letter-spacing:.04em">CP</span>':''}
           ${isOv?'<span style="font-size:7px;color:var(--danger);flex-shrink:0">OD</span>':''}
@@ -9518,13 +9536,13 @@ function _renderGanttNow(){
         if(t.milestone){
           const mx=x-6;
           const milOutline=isSelected?'0 0 0 3px var(--accent)':isPred?'0 0 0 2px #c9a84c':isSucc?'0 0 0 2px #4a7c59':'0 1px 4px rgba(0,0,0,.3)';
-          rowContent+=`<div style="position:absolute;top:9px;left:${mx}px;width:14px;height:14px;transform:rotate(45deg);background:${(showCP&&isCrit)?'#c04040':clr};z-index:4;cursor:pointer;box-shadow:${milOutline};opacity:${isDimmed?0.3:1}" title="${t.name} | ${t.startDate}" onclick="ganttClickTask('${t.id}')"></div>`;
+          rowContent+=`<div style="position:absolute;top:9px;left:${mx}px;width:14px;height:14px;transform:rotate(45deg);background:${(showCP&&isCrit)?'#c04040':clr};z-index:4;cursor:pointer;box-shadow:${milOutline};opacity:${isDimmed?0.3:1}" title="${escHtml(t.name)} | ${t.startDate}" onclick="ganttClickTask('${t.id}')"></div>`;
         } else {
           const barOutline=isSelected?'0 0 0 2.5px var(--accent),0 2px 6px rgba(0,0,0,.15)':isPred?'0 0 0 2px #c9a84c':isSucc?'0 0 0 2px #4a7c59':isParallel?'0 0 0 1.5px #3a5f8b':'0 1px 3px rgba(0,0,0,.2)';
           const gsDayStr=gS.toISOString().split('T')[0];
-          rowContent+=`<div draggable="${CAN.edit?'true':'false'}" data-tid="${t.id}" data-bx="${x}" data-cw="${cw}" data-gs="${gsDayStr}" ondragstart="ganttBarDragStart(event,this)" ondragend="S.ganttDrag=null" style="position:absolute;top:7px;height:16px;left:${x}px;width:${w}px;border-radius:3px;background:${barClr};cursor:${CAN.edit?'grab':'pointer'};display:flex;align-items:center;overflow:hidden;z-index:4;box-shadow:${barOutline};opacity:${isDimmed?0.3:1};${isOv?'outline:2px solid #c04040;':''}" title="${t.name} | ${t.assignee||''} | ${t.startDate}→${t.endDate} | ${t.progress||0}%${CAN.edit?' · drag to reschedule':''}" onclick="ganttClickTask('${t.id}')">
+          rowContent+=`<div draggable="${CAN.edit?'true':'false'}" data-tid="${t.id}" data-bx="${x}" data-cw="${cw}" data-gs="${gsDayStr}" ondragstart="ganttBarDragStart(event,this)" ondragend="S.ganttDrag=null;_ganttDragLockUntil=Date.now()+250" style="position:absolute;top:7px;height:16px;left:${x}px;width:${w}px;border-radius:3px;background:${barClr};cursor:${CAN.edit?'grab':'pointer'};display:flex;align-items:center;overflow:hidden;z-index:4;box-shadow:${barOutline};opacity:${isDimmed?0.3:1};${isOv?'outline:2px solid #c04040;':''}" title="${escHtml(t.name)} | ${escHtml(t.assignee||'')} | ${t.startDate}→${t.endDate} | ${t.progress||0}%${CAN.edit?' · drag to reschedule':''}" onclick="ganttClickTask('${t.id}')">
             <div style="position:absolute;left:0;top:0;bottom:0;width:${progW}px;background:rgba(0,0,0,.22);border-radius:3px 0 0 3px"></div>
-            ${w>55?`<span style="position:relative;z-index:1;padding:0 5px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</span>`:''}
+            ${w>55?`<span style="position:relative;z-index:1;padding:0 5px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(t.name)}</span>`:''}
           </div>`;
           if(showBL&&t.baselineStart&&t.baselineEnd){
             rowContent+=`<div style="position:absolute;height:3px;background:rgba(139,111,71,.5);border-radius:2px;z-index:3;top:26px;left:${toX(t.baselineStart)}px;width:${toW(t.baselineStart,t.baselineEnd)}px" title="Baseline: ${t.baselineStart}→${t.baselineEnd}"></div>`;
@@ -9552,10 +9570,16 @@ function _renderGanttNow(){
       (t.predecessors||[]).forEach(pred=>{
         const fromPos=taskRowMap[pred.id];
         if(!fromPos)return;
-        const isFS=!pred.type||pred.type==='FS';
-        const x1=isFS?fromPos.xEnd:fromPos.xStart;
+        // Endpoints depend on the dependency type:
+        //   FS finish→start, SS start→start, FF finish→finish, SF start→finish
+        // Previously this drew every arrow as if it were FS, hiding the real
+        // shape of SS/FF/SF dependencies that the CPM scheduler honours.
+        const depType=(pred.type||'FS').toUpperCase();
+        const fromAtEnd = depType==='FS' || depType==='FF';
+        const toAtEnd   = depType==='FF' || depType==='SF';
+        const x1=fromAtEnd?fromPos.xEnd:fromPos.xStart;
         const y1=fromPos.row*rH+rH/2;
-        const x2=toPos.xStart;
+        const x2=toAtEnd?toPos.xEnd:toPos.xStart;
         const y2=toPos.row*rH+rH/2;
         const isCritLink=showCP&&critIds.has(t.id)&&critIds.has(pred.id);
 
@@ -9589,6 +9613,14 @@ function _renderGanttNow(){
         }
         const dashAttr=aDash?`stroke-dasharray="${aDash}"`:'';
         paths+=`<path d="${pathD}" fill="none" stroke="${aClr}" stroke-width="${aSw}" stroke-opacity="${aOp}" ${dashAttr} marker-end="${aMark}"/>`;
+        // Non-FS dependency type label, small text badge near the arrow start
+        // so planners can tell at a glance that this is SS/FF/SF rather than
+        // assume it's a default FS link. FS arrows are unlabelled (the default).
+        if(depType !== 'FS' && aOp > 0.3){
+          const tx = x1 + (x2 > x1 ? 4 : -16);
+          const ty = y1 - 4;
+          paths += `<text x="${tx}" y="${ty}" font-family="DM Sans,sans-serif" font-size="8" font-weight="700" fill="${aClr}" fill-opacity="${aOp}" style="user-select:none">${depType}</text>`;
+        }
 
         // ── Row number label on the elbow bend (e.g. "3→7")
         // Only show labels for visible (non-dimmed) arrows
@@ -9650,7 +9682,13 @@ function gCollToggle(key){S.coll[key]=!S.coll[key];renderGantt();}
 // ── Gantt task click:
 //   1st click on a task  → highlight dependency lines only (no panel)
 //   2nd click on the same task → open side panel
+// Set in ondragend so a click event synthesised at the end of a drag
+// (HTML drag-and-drop fires both dragend AND click on the same element when
+// the pointer didn't move enough to register a "real" drag) doesn't open
+// the task panel. Cleared after a short tick.
+let _ganttDragLockUntil = 0;
 function ganttClickTask(id){
+  if(Date.now() < _ganttDragLockUntil) return; // suppress click that came from a drag end
   if(S.gSelTask===id){
     // Already selected: second click opens the detail panel
     openTP(id);
@@ -9664,7 +9702,7 @@ function ganttClickTask(id){
 function gotoToday(){
   const el=$('gOuter');if(!el||!S.gStart)return;
   const zoom=$('gzoom').value;const cw=zoom==='week'?38:zoom==='month'?18:9;
-  const d=Math.max(0,dBetween(S.gStart.toISOString().split('T')[0],new Date().toISOString().split('T')[0]));
+  const d=Math.max(0,dBetween(S.gStart.toISOString().split('T')[0],_todayISO()));
   el.scrollLeft=Math.max(0,d*cw-80);
 }
 
@@ -9759,7 +9797,7 @@ function ganttBarDrop(e){
   Store.saveProjectTasks(S.proj.id,ts);Store.flush();
   renderGantt();renderDetStats();syncProjStatus(S.proj.id);
   _logAudit('reschedule','task',tid,task.name);
-  toast(`${task.name}: ${oldStartStr}→${newStartStr}`,'success',5000,{label:'Undo',fn:()=>{
+  toast(`${task.name}: ${oldStartStr}→${newStartStr}`,'success',20000,{label:'Undo',fn:()=>{
     const ts2=Store.getTasksByProject(S.proj.id);
     const t2=ts2.find(t=>t.id===tid);
     if(!t2)return;
@@ -9832,7 +9870,7 @@ function renderRes(){
     const done=mts.filter(t=>t.status==='completed').length;
     return `<div class="rcard">
       <div class="rav" style="background:${r.color||aClr(r.name)}">${ini(r.name)}</div>
-      <div class="rname">${r.name}</div><div class="rrole">${r.role||'-'}</div>
+      <div class="rname">${escHtml(r.name)}</div><div class="rrole">${escHtml(r.role||'-')}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;text-align:center">
         <div><div style="font-size:18px;font-weight:700;color:var(--accent)">${mts.length}</div><div style="font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-light)">Tasks</div></div>
         <div><div style="font-size:18px;font-weight:700;color:var(--success)">${done}</div><div style="font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-light)">Done</div></div>
@@ -10115,6 +10153,20 @@ function doReviewRequest(decision){
   const d=_blData(pid);
   const req=d.approvalRequests.find(r=>r.id===reqId);
   if(!req)return;
+  // Guard against re-reviewing an already-decided request. Without this, a
+  // stale modal left open by another reviewer (or a double-click) silently
+  // overwrites the original decision and drops the prior reviewer's name
+  // and comment. We refuse the second attempt and ask the user to refresh.
+  if(req.status && req.status !== 'pending'){
+    toast(`This request was already ${req.status} by ${req.reviewedBy||'another reviewer'}. Refresh to see the latest state.`,'warning',6000);
+    closeMod('blReviewMod');
+    renderBL();
+    return;
+  }
+  if(decision !== 'approved' && decision !== 'rejected'){
+    toast('Invalid decision','error');
+    return;
+  }
   const user=_blCurrentUser();
   req.status=decision;
   req.reviewedBy=user.name;
@@ -10518,7 +10570,7 @@ function renderBlmComparison(){
 
   $('blmCmpBody').innerHTML=rows.map(({bt,ct,sv,fv,blDur,curDur})=>`
     <tr>
-      <td style="font-weight:500">${bt.name}</td>
+      <td style="font-weight:500">${escHtml(bt.name||'')}</td>
       <td style="font-size:10px;color:var(--text-muted)">${bt.phaseName}</td>
       <td style="font-family:'DM Mono',monospace;font-size:10px">${fmtD(bt.blStart)}</td>
       <td style="font-family:'DM Mono',monospace;font-size:10px">${fmtD(bt.blEnd)}</td>
@@ -10550,7 +10602,7 @@ function blmViewDetail(blId){
     <table class="bl-cmp-tbl">
       <thead><tr><th>Task</th><th>Phase</th><th>BL Start</th><th>BL Finish</th><th>Duration</th></tr></thead>
       <tbody>${bl.tasks.map(t=>`<tr>
-        <td style="font-weight:500">${t.name}</td>
+        <td style="font-weight:500">${escHtml(t.name||'')}</td>
         <td style="font-size:10px;color:var(--text-muted)">${t.phaseName}</td>
         <td style="font-family:'DM Mono',monospace;font-size:10px">${fmtD(t.blStart)}</td>
         <td style="font-family:'DM Mono',monospace;font-size:10px">${fmtD(t.blEnd)}</td>
@@ -10614,8 +10666,8 @@ function renderBL(){
       return `<div class="${cardClass}" onclick="blmShowCompareFor('${bl.id}')">
         <div class="bl-ver-badge" style="color:${bl.status==='frozen'?'var(--warning)':'var(--blue)'}">${bl.version}</div>
         <div class="bl-ver-info">
-          <div class="bl-ver-name">${bl.name}</div>
-          <div class="bl-ver-meta">${bl.tasks.length} tasks · Created by ${bl.createdBy} · ${fmtD(bl.createdAt)}${bl.frozenAt?' · Frozen: '+fmtD(bl.frozenAt):''}</div>
+          <div class="bl-ver-name">${escHtml(bl.name)}</div>
+          <div class="bl-ver-meta">${bl.tasks.length} tasks · Created by ${escHtml(bl.createdBy)} · ${fmtD(bl.createdAt)}${bl.frozenAt?' · Frozen: '+fmtD(bl.frozenAt):''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">${statusChip}${activeChip}${pendingChip}</div>
         <div class="bl-ver-actions" onclick="event.stopPropagation()">${actions}</div>
@@ -10638,10 +10690,10 @@ function renderBL(){
       const typeLabel=req.type==='freeze'?'🔒 Freeze Request':'✏️ Modification Request';
       const actions=req.status==='pending'&&isAdmin?`<button class="btn btn-ghost btn-sm" onclick="openReviewRequest('${req.id}')">Review</button>`:'';
       return `<div class="bl-req-card req-${req.status}">
-        <div class="bl-req-hdr"><div class="bl-req-title">${typeLabel} - ${req.baselineVersion} "${req.baselineName}"</div>${statusChip}</div>
-        <div class="bl-req-meta">Requested by ${req.requestedBy} · ${fmtD(req.requestedAt)}${req.type==='modify'&&req.newBaselineName?' · New Name: '+req.newBaselineName:''}${req.reviewedBy?' · Reviewed by '+req.reviewedBy+' ('+fmtD(req.reviewedAt)+')':''}</div>
-        <div class="bl-req-reason">${req.reason}</div>
-        ${req.comment?`<div style="font-size:11px;color:var(--text-muted);margin-top:6px;padding:5px 8px;background:var(--surface2);border-radius:4px"><strong>Reviewer note:</strong> ${req.comment}</div>`:''}
+        <div class="bl-req-hdr"><div class="bl-req-title">${typeLabel} - ${escHtml(req.baselineVersion)} "${escHtml(req.baselineName)}"</div>${statusChip}</div>
+        <div class="bl-req-meta">Requested by ${escHtml(req.requestedBy)} · ${fmtD(req.requestedAt)}${req.type==='modify'&&req.newBaselineName?' · New Name: '+escHtml(req.newBaselineName):''}${req.reviewedBy?' · Reviewed by '+escHtml(req.reviewedBy)+' ('+fmtD(req.reviewedAt)+')':''}</div>
+        <div class="bl-req-reason">${escHtml(req.reason)}</div>
+        ${req.comment?`<div style="font-size:11px;color:var(--text-muted);margin-top:6px;padding:5px 8px;background:var(--surface2);border-radius:4px"><strong>Reviewer note:</strong> ${escHtml(req.comment)}</div>`:''}
         ${actions?`<div class="bl-req-actions">${actions}</div>`:''}
       </div>`;
     }).join('')}</div>`;
@@ -11041,7 +11093,7 @@ function renderPlanGantt(){
   const totW=totDays*colW;
   const toX=d=>Math.max(_pDiff(gS,d)||0,0)*colW;
   const toW=(s,e)=>Math.max((_pDiff(s,e)||0)*colW+colW,4);
-  const today=new Date().toISOString().split('T')[0];
+  const today=_todayISO();
   // Header ticks
   let hdrHtml='';
   if(scale==='month'){
@@ -11135,15 +11187,15 @@ function renderPlanGantt(){
     if(t.start&&t.end){
       if(isMil){
         const mx=toX(t.start);
-        rowsHtml+=`<div style="position:absolute;left:${mx-6}px;top:9px;width:12px;height:12px;transform:rotate(45deg);background:${clr};border-radius:2px" title="${t.name}"></div>`;
+        rowsHtml+=`<div style="position:absolute;left:${mx-6}px;top:9px;width:12px;height:12px;transform:rotate(45deg);background:${clr};border-radius:2px" title="${escHtml(t.name)}"></div>`;
       }else{
         const bx=toX(t.start),bw=toW(t.start,t.end);
         const prog=Math.round(bw*((t.progress||0)/100));
         const bg=isCrit?`linear-gradient(90deg,#8b3a3a,#c47a7a)`:`linear-gradient(90deg,${clr},${clr}bb)`;
         const top=isSm?'top:11px;height:10px':'top:7px;height:18px';
         const rad=isSm?'border-radius:2px':'border-radius:3px';
-        const lbl=(bw>50&&!isSm)?`<span style="position:relative;z-index:1;font-size:9px;font-weight:600;color:#fff;padding-left:4px;max-width:${bw-10}px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${t.name}</span>`:'';
-        rowsHtml+=`<div class="plan-gbar ${isSm?'plan-gbar-sum':''}" style="position:absolute;left:${bx}px;width:${bw}px;${top};${rad};background:${bg}" title="${t.name}${isCrit?' [CRITICAL]':''}"><div class="plan-prog" style="width:${prog}px"></div>${lbl}</div>`;
+        const lbl=(bw>50&&!isSm)?`<span style="position:relative;z-index:1;font-size:9px;font-weight:600;color:#fff;padding-left:4px;max-width:${bw-10}px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${escHtml(t.name)}</span>`:'';
+        rowsHtml+=`<div class="plan-gbar ${isSm?'plan-gbar-sum':''}" style="position:absolute;left:${bx}px;width:${bw}px;${top};${rad};background:${bg}" title="${escHtml(t.name)}${isCrit?' [CRITICAL]':''}"><div class="plan-prog" style="width:${prog}px"></div>${lbl}</div>`;
       }
     }
     rowsHtml+='</div>';
@@ -11827,7 +11879,7 @@ function renderCP(){
     }
     chainEl.style.display='block';
     chainEl.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:2px 0"><span style="font-size:10px;font-weight:700;color:var(--danger);letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;margin-right:4px">CRITICAL CHAIN:</span>${
-      chain.map((t,i)=>`${i>0?'<span class="cp-chain-arr">→</span>':''}<span class="cp-chain-task">${t.name} <span style="opacity:.65;font-size:10px">${_pFmtShow(t.end)}</span></span>`).join('')
+      chain.map((t,i)=>`${i>0?'<span class="cp-chain-arr">→</span>':''}<span class="cp-chain-task">${escHtml(t.name)} <span style="opacity:.65;font-size:10px">${_pFmtShow(t.end)}</span></span>`).join('')
     }</div>`;
   }else{
     chainEl.style.display='none';
@@ -11859,7 +11911,7 @@ function renderCP(){
       const rowClass=t.isCritical?'style="background:rgba(139,58,58,.04)"':'';
       return `<tr ${rowClass} onclick="if(source==='planner')openPlanTP('${t.id}')">
         <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-          ${t.isCritical?'<span class="plan-crit-pip"></span>':''}<strong style="${t.isCritical?'color:var(--danger)':''}">${t.name}</strong>
+          ${t.isCritical?'<span class="plan-crit-pip"></span>':''}<strong style="${t.isCritical?'color:var(--danger)':''}">${escHtml(t.name)}</strong>
         </td>
         <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)">${_pFmtShow(t.start)}</td>
         <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)">${_pFmtShow(t.end)}</td>
@@ -11889,7 +11941,7 @@ function renderCal(){
   const mNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
   $('calTitle').textContent=mNames[m]+' '+y;
   const fd=new Date(y,m,1).getDay(),dim=new Date(y,m+1,0).getDate();
-  const today=new Date().toISOString().split('T')[0];
+  const today=_todayISO();
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let html=days.map(d=>`<div class="cal-dh">${d}</div>`).join('');
   for(let i=0;i<fd;i++)html+=`<div class="cal-day otm"></div>`;
@@ -11899,7 +11951,7 @@ function renderCal(){
     // Show all tasks that are active (span across) this day, not just exact start/end matches
     const dts=ts.filter(t=>t.startDate&&t.endDate&&t.startDate<=ds&&t.endDate>=ds);
     html+=`<div class="cal-day${isTday?' today':''}${dts.length?' has-tasks':''}" onclick="calDayClick('${ds}',${JSON.stringify(dts.map(t=>t.id))})">      <div class="cdn${isTday?' tnm':''}">${d}${dts.length?'<span style="width:5px;height:5px;background:var(--accent);border-radius:50%;display:inline-block;margin-left:3px;vertical-align:middle"></span>':''}</div>
-      ${dts.slice(0,2).map(t=>`<div class="cev" style="background:${PCLR[t.phaseId]||'#8b6f47'}20;color:${PCLR[t.phaseId]||'#8b6f47'};border-left:2px solid ${PCLR[t.phaseId]||'#8b6f47'}" onclick="event.stopPropagation();openTP('${t.id}')" title="${t.name}">${t.name.slice(0,18)}${t.name.length>18?'…':''}</div>`).join('')}
+      ${dts.slice(0,2).map(t=>`<div class="cev" style="background:${PCLR[t.phaseId]||'#8b6f47'}20;color:${PCLR[t.phaseId]||'#8b6f47'};border-left:2px solid ${PCLR[t.phaseId]||'#8b6f47'}" onclick="event.stopPropagation();openTP('${t.id}')" title="${escHtml(t.name)}">${escHtml(t.name.slice(0,18))}${t.name.length>18?'…':''}</div>`).join('')}
       ${dts.length>2?`<div class="cal-more" onclick="event.stopPropagation();calDayClick('${ds}',${JSON.stringify(dts.map(t=>t.id))})">+${dts.length-2} more</div>`:''}
     </div>`;
   }
@@ -11923,7 +11975,7 @@ function calDayClick(ds,ids){
     <div style="overflow-y:auto;padding:8px">`;
   dayTasks.forEach(t=>{
     html+=`<div style="padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:.15s" onmouseover="this.style.background='var(--accent-pale)'" onmouseout="this.style.background=''" onclick="this.closest('[style*=position]').remove();openTP('${t.id}')">
-      <div style="font-size:12px;font-weight:600;margin-bottom:4px">${t.name}</div>
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px">${escHtml(t.name)}</div>
       <div style="display:flex;gap:8px;font-size:10px;color:var(--text-muted)">
         <span style="color:${sc[t.status]||'#888'}">${slt(t.status)}</span>
         <span class="badge b-${t.priority}" style="font-size:9px;padding:1px 6px">${t.priority}</span>
@@ -12053,7 +12105,7 @@ function rptStatus(){
   const p=S.proj;const ts=Store.getTasksByProject(p.id);
   const done=ts.filter(t=>t.status==='completed').length;
   const pct=p.status==='completed'?100:_wPct(ts);
-  const drem=p.end?Math.max(0,dBetween(new Date().toISOString().split('T')[0],p.end)):0;
+  const drem=p.end?Math.max(0,dBetween(_todayISO(),p.end)):0;
   showRpt('Project Status Report',`<div class="bud-sum" style="margin-bottom:14px"><div class="bcard"><div class="stat-lbl">Progress</div><div class="stat-val ca">${pct}%</div></div><div class="bcard"><div class="stat-lbl">Days Left</div><div class="stat-val cb">${drem}</div></div><div class="bcard"><div class="stat-lbl">Budget</div><div class="stat-val cg">${fmtINR(p.budget)}</div></div><div class="bcard"><div class="stat-lbl">Status</div><div class="stat-val"><span class="badge ${sbl(p.status)}">${slt(p.status)}</span></div></div></div><table class="btbl"><thead><tr><th>Phase</th><th>Tasks</th><th>Done</th><th>%</th></tr></thead><tbody>${PH.map(ph=>{const pt=ts.filter(t=>t.phaseId===ph.id);const pd=pt.filter(t=>t.status==='completed').length;const pp=pt.length?Math.round(pd/pt.length*100):0;return pt.length?`<tr><td>${ph.name}</td><td>${pt.length}</td><td>${pd}</td><td><div style="display:flex;align-items:center;gap:5px"><div class="prog" style="width:80px;margin:0"><div class="prog-fill" style="width:${pp}%"></div></div>${pp}%</div></td></tr>`:'';}).join('')}</tbody></table>`);
 }
 function rptTasks(){
@@ -12062,7 +12114,7 @@ function rptTasks(){
   const ts=applyRptDateFilter(allTs);
   const dateLabel=getRptDateLabel();
   const sc={'not-started':0,'in-progress':0,'completed':0,'blocked':0,'on-hold':0};ts.forEach(t=>{if(sc[t.status]!==undefined)sc[t.status]++;});
-  showRpt('Task Summary',`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Period: <strong>${dateLabel}</strong> · ${ts.length} task${ts.length!==1?'s':''}</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">${Object.entries(sc).map(([s,c])=>`<div class="bcard" style="flex:1;min-width:80px;text-align:center"><div class="stat-val">${c}</div><div class="stat-sub">${slt(s)}</div></div>`).join('')}</div><table class="btbl"><thead><tr><th>Task</th><th>Phase</th><th>Sub-Phase</th><th>Assignee</th><th>Status</th><th>%</th><th>Start</th><th>Finish</th></tr></thead><tbody>${ts.slice(0,100).map(t=>`<tr><td>${t.name}</td><td style="font-size:10px;color:var(--text-muted)">${t.phaseName}</td><td style="font-size:10px;color:var(--text-muted)">${t.subphaseName||'-'}</td><td>${t.assignee||'-'}</td><td><span class="badge ${sbl(t.status)}">${slt(t.status)}</span></td><td>${t.progress||0}%</td><td style="font-family:'DM Mono',monospace;font-size:10px">${fmt(t.startDate)}</td><td style="font-family:'DM Mono',monospace;font-size:10px">${fmt(t.endDate)}</td></tr>`).join('')}${ts.length>100?`<tr><td colspan="8" style="text-align:center;color:var(--text-muted);font-size:11px">... ${ts.length-100} more tasks</td></tr>`:''}</tbody></table>`);
+  showRpt('Task Summary',`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Period: <strong>${dateLabel}</strong> · ${ts.length} task${ts.length!==1?'s':''}</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">${Object.entries(sc).map(([s,c])=>`<div class="bcard" style="flex:1;min-width:80px;text-align:center"><div class="stat-val">${c}</div><div class="stat-sub">${slt(s)}</div></div>`).join('')}</div><table class="btbl"><thead><tr><th>Task</th><th>Phase</th><th>Sub-Phase</th><th>Assignee</th><th>Status</th><th>%</th><th>Start</th><th>Finish</th></tr></thead><tbody>${ts.slice(0,100).map(t=>`<tr><td>${escHtml(t.name)}</td><td style="font-size:10px;color:var(--text-muted)">${escHtml(t.phaseName||'')}</td><td style="font-size:10px;color:var(--text-muted)">${escHtml(t.subphaseName||'-')}</td><td>${escHtml(t.assignee||'-')}</td><td><span class="badge ${sbl(t.status)}">${slt(t.status)}</span></td><td>${t.progress||0}%</td><td style="font-family:'DM Mono',monospace;font-size:10px">${fmt(t.startDate)}</td><td style="font-family:'DM Mono',monospace;font-size:10px">${fmt(t.endDate)}</td></tr>`).join('')}${ts.length>100?`<tr><td colspan="8" style="text-align:center;color:var(--text-muted);font-size:11px">... ${ts.length-100} more tasks</td></tr>`:''}</tbody></table>`);
 }
 function rptCosts(){
   if(!S.proj)return showRpt('Cost Report','<div class="empty-st"><div class="et">Open a project first</div></div>');
@@ -12092,15 +12144,15 @@ function rptRes(){
 }
 function rptOverdue(){
   if(!S.proj)return showRpt('Overdue Tasks','<div class="empty-st"><div class="et">Open a project first</div></div>');
-  const allTs=Store.getTasksByProject(S.proj.id);const tod=new Date().toISOString().split('T')[0];
+  const allTs=Store.getTasksByProject(S.proj.id);const tod=_todayISO();
   const ts=applyRptDateFilter(allTs);const dateLabel=getRptDateLabel();
   const ov=ts.filter(t=>t.endDate&&t.endDate<tod&&t.status!=='completed');
-  showRpt('Overdue Tasks',`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Period: <strong>${dateLabel}</strong></div>`+(ov.length?`<table class="btbl"><thead><tr><th>Task</th><th>Phase</th><th>Sub-Phase</th><th>Assignee</th><th>Finish</th><th>Days Over</th><th>Status</th></tr></thead><tbody>${ov.map(t=>{const d=dBetween(t.endDate,tod);return`<tr style="background:var(--danger-pale)"><td>${t.name}</td><td style="font-size:10px">${t.phaseName}</td><td style="font-size:10px">${t.subphaseName||'-'}</td><td>${t.assignee||'-'}</td><td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--danger)">${fmt(t.endDate)}</td><td style="font-weight:700;color:var(--danger)">+${d}d</td><td><span class="badge ${sbl(t.status)}">${slt(t.status)}</span></td></tr>`;}).join('')}</tbody></table>`:'<div class="empty-st"><div class="ei"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="et">No overdue tasks!</div></div>'));
+  showRpt('Overdue Tasks',`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Period: <strong>${dateLabel}</strong></div>`+(ov.length?`<table class="btbl"><thead><tr><th>Task</th><th>Phase</th><th>Sub-Phase</th><th>Assignee</th><th>Finish</th><th>Days Over</th><th>Status</th></tr></thead><tbody>${ov.map(t=>{const d=dBetween(t.endDate,tod);return`<tr style="background:var(--danger-pale)"><td>${escHtml(t.name)}</td><td style="font-size:10px">${escHtml(t.phaseName||'')}</td><td style="font-size:10px">${escHtml(t.subphaseName||'-')}</td><td>${escHtml(t.assignee||'-')}</td><td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--danger)">${fmt(t.endDate)}</td><td style="font-weight:700;color:var(--danger)">+${d}d</td><td><span class="badge ${sbl(t.status)}">${slt(t.status)}</span></td></tr>`;}).join('')}</tbody></table>`:'<div class="empty-st"><div class="ei"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="et">No overdue tasks!</div></div>'));
 }
 function rptMS(){
   if(!S.proj)return showRpt('Milestone Report','<div class="empty-st"><div class="et">Open a project first</div></div>');
   const ts=applyRptDateFilter(Store.getTasksByProject(S.proj.id));const dateLabel=getRptDateLabel();
-  const today=new Date().toISOString().split('T')[0];
+  const today=_todayISO();
   // Milestones = each Task-group (Phase + Sub-Phase) completion.
   // When all subtasks under a task-group are done, that task-group is a milestone.
   const groups={};
@@ -12143,7 +12195,7 @@ function rptBlocked(){
   if(!S.proj)return showRpt('Blocked Tasks','<div class="empty-st"><div class="et">Open a project first</div></div>');
   const ts=applyRptDateFilter(Store.getTasksByProject(S.proj.id));const dateLabel=getRptDateLabel();
   const bl=ts.filter(t=>t.status==='blocked');
-  showRpt('Blocked Tasks',`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Period: <strong>${dateLabel}</strong></div>`+(bl.length?`<table class="btbl"><thead><tr><th>Task</th><th>Phase</th><th>Sub-Phase</th><th>Assignee</th><th>Notes</th></tr></thead><tbody>${bl.map(t=>`<tr style="background:var(--danger-pale)"><td>${t.name}</td><td>${t.phaseName}</td><td>${t.subphaseName||'-'}</td><td>${t.assignee||'-'}</td><td style="font-size:11px;color:var(--text-muted)">${t.notes||'-'}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-st"><div class="ei"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="et">No blocked tasks!</div></div>'));
+  showRpt('Blocked Tasks',`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Period: <strong>${dateLabel}</strong></div>`+(bl.length?`<table class="btbl"><thead><tr><th>Task</th><th>Phase</th><th>Sub-Phase</th><th>Assignee</th><th>Notes</th></tr></thead><tbody>${bl.map(t=>`<tr style="background:var(--danger-pale)"><td>${escHtml(t.name)}</td><td>${escHtml(t.phaseName||'')}</td><td>${escHtml(t.subphaseName||'-')}</td><td>${escHtml(t.assignee||'-')}</td><td style="font-size:11px;color:var(--text-muted)">${escHtml(t.notes||'-')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-st"><div class="ei"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="et">No blocked tasks!</div></div>'));
 }
 function rptPhases(){
   if(!S.proj)return showRpt('Phase Progress','<div class="empty-st"><div class="et">Open a project first</div></div>');
@@ -13830,7 +13882,7 @@ function showVillaPopup(pid,e){
     <div style="border-top:4px solid ${clr};border-radius:4px 4px 0 0;margin:-20px -20px 14px;padding:14px 16px 12px;background:${clr}12">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
-          <div style="font-size:16px;font-weight:700;color:#1a1714;margin-bottom:3px">${p.name}</div>
+          <div style="font-size:16px;font-weight:700;color:#1a1714;margin-bottom:3px">${escHtml(p.name)}</div>
           <div style="font-size:11px;color:#b0a898;font-family:'DM Mono',monospace">${p.code}</div>
         </div>
         <span class="badge b-${p.status}" style="flex-shrink:0">${slt(p.status)}</span>
@@ -13948,39 +14000,12 @@ async function doLogin(){
   if(!email||!pass){ err.textContent='Please enter email and password.'; err.style.display='block'; return; }
   if(loginBtn) loginBtn.disabled = true;
 
-  // ── File mode: client-side authentication ──────────────────────────────────
-  // Works when the HTML is opened directly (file://) without a backend server.
+  // file:// mode is no longer supported. The server is the sole source of
+  // truth for authentication and data. Refuse the login attempt cleanly so
+  // the user knows what's happening rather than seeing a frozen form.
   if(!CKY_API){
-    // User roster - edit passwords here if you change them
-    const _LOCAL_USERS=[
-      {id:'u1', email:'admin@chanakya.in',              name:'Admin',           role:'Administrator',  permissions:'edit,approve,manage', ph:'Q2hhbmdlTWUwMDEh'},
-      {id:'u2', email:'pavan@whitelotusgroup.in',        name:'Pavan',           role:'Project Manager',permissions:'approve',             ph:'Q2hhbmdlTWUwMDIh'},
-      {id:'u3', email:'chetan@whitelotusgroup.in',       name:'Chetan',          role:'Project Manager',permissions:'approve',             ph:'Q2hhbmdlTWUwMDMh'},
-      {id:'u4', email:'praveer.c@whitelotusgroup.in',    name:'Praveer C',       role:'Project Manager',permissions:'edit,manage',         ph:'Q2hhbmdlTWUwMDQh'},
-      {id:'u5', email:'shraddha.b@whitelotusgroup.in',   name:'Shraddha B',      role:'Project Manager',permissions:'edit,manage',         ph:'Q2hhbmdlTWUwMDUh'},
-      {id:'u6', email:'stanly.john@whitelotusgroup.in',  name:'Stanly John',     role:'Project Manager',permissions:'view',                ph:'Q2hhbmdlTWUwMDYh'},
-      {id:'u7', email:'vandana.p@whitelotusgroup.in',    name:'Vandana P',       role:'Project Manager',permissions:'edit,approve,manage', ph:'Q2hhbmdlTWUwMDch'},
-      {id:'u8', email:'productanalyst.wl@gmail.com',     name:'Product Analyst', role:'Analyst',        permissions:'view',                ph:'Q2hhbmdlTWUwMDgh'},
-      {id:'u9', email:'dinesh@whitelotusgroup.in',       name:'Dinesh',          role:'Project Manager',permissions:'edit,manage',         ph:'d2xnMTIz'},
-      {id:'u10',email:'madhavarajan.s@whitelotusgroup.in',name:'Madhavarajan S', role:'Project Manager',permissions:'manage',              ph:'d2xnMTIz'},
-    ];
-    const u=_LOCAL_USERS.find(x=>x.email===email);
-    const passOk = u && (btoa(pass)===u.ph);
-    if(!u||!passOk){
-      err.textContent='Incorrect email or password.';
-      err.style.display='block';
-      $('li-pass').value='';
-      $('li-pass').style.borderColor='rgba(220,80,80,.6)';
-      setTimeout(()=>$('li-pass').style.borderColor='rgba(255,255,255,.15)',1500);
-      if(loginBtn) loginBtn.disabled=false;
-      return;
-    }
-    _setToken('local-'+u.id+'-'+Date.now());
-    _currentUser={id:u.id,email:u.email,name:u.name,role:u.role,permissions:u.permissions||'view'};
-    _initPermissions(_currentUser);
-    $('screen-login').style.opacity='0';
-    $('screen-login').style.transition='opacity .3s';
-    setTimeout(()=>{ $('screen-login').style.display='none'; showSelectScreen(); _applyPermissions(); },300);
+    err.textContent='This app requires the server to be reachable. Please open it via https://chanakya-pm.onrender.com (or the local server URL).';
+    err.style.display='block';
     if(loginBtn) loginBtn.disabled=false;
     return;
   }
