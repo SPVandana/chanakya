@@ -10440,6 +10440,58 @@ function blmDeleteBaseline(blId){
   renderBL();
 }
 
+// ── Restore a frozen baseline back onto the live task schedule.
+// Replaces each task's startDate / endDate / duration with the snapshot's
+// values. Progress, status, actual dates, predecessors, and any tasks added
+// since the baseline was captured are LEFT UNTOUCHED — restore is a date
+// operation, not a wholesale revert. Snapshot-and-undo so a wrong click is
+// recoverable for 20 seconds.
+function blmRestoreBaseline(blId){
+  const pid=S.proj?.id; if(!pid)return;
+  if(!_blCanCreate()){toast('Only Project Managers or Administrators can restore baselines','warning');return;}
+  const d=_blData(pid);
+  const bl=d.baselines.find(b=>b.id===blId);
+  if(!bl){toast('Baseline not found','error');return;}
+  if(bl.status!=='frozen'){toast('Only frozen baselines can be restored. Drafts can be edited via Open in Planner.','warning');return;}
+  if(!bl.tasks||!bl.tasks.length){toast('This baseline has no task snapshots to restore','error');return;}
+
+  // Count how many of the live tasks would be touched, for the confirm prompt.
+  const liveTasks=Store.getTasksByProject(pid).filter(t=>!t.isGroupHeader);
+  const liveById=new Map(liveTasks.map(t=>[t.id,t]));
+  const touched=bl.tasks.filter(bt=>bt.taskId&&liveById.has(bt.taskId)).length;
+  const newOnes=bl.tasks.filter(bt=>bt.taskId&&!liveById.has(bt.taskId)).length;
+  const phrase=newOnes
+    ? `${touched} task${touched===1?'':'s'} will have their dates restored, and ${newOnes} task${newOnes===1?'':'s'} that were in the baseline but no longer exist will be re-created.`
+    : `${touched} task${touched===1?'':'s'} will have their dates restored to the baseline snapshot.`;
+  const ok=confirm(
+    `Restore baseline "${bl.version} - ${bl.name}"?\n\n`+
+    `${phrase}\n\n`+
+    `Progress, status, and actual dates are NOT changed. You'll have an Undo button for 20 seconds afterwards. Continue?`
+  );
+  if(!ok)return;
+
+  // Snapshot for undo — capture the full current task list so we can roll back
+  // every field, not just the dates we're about to overwrite.
+  const snapshot=Store.getTasksByProject(pid).map(t=>({...t}));
+
+  // Apply the restore through the existing helper (already used by approval-
+  // driven baseline modifies, so the merge semantics are battle-tested).
+  _applyBaselineTasksToTaskSheet(pid,bl.tasks);
+  Store.flush();
+  if(S.tab==='tg')renderGantt();
+  renderWBS(); renderDetStats(); syncProjStatus(pid);
+  renderBL();
+
+  _logAudit('restore','baseline',bl.id,bl.name);
+
+  toast(`Baseline "${bl.name}" restored — ${touched} task${touched===1?'':'s'} updated`,'success',20000,{label:'Undo',fn:()=>{
+    Store.saveProjectTasks(pid,snapshot);Store.flush();
+    if(S.tab==='tg')renderGantt();
+    renderWBS(); renderDetStats(); syncProjStatus(pid); renderBL();
+    toast('Baseline restore undone','success');
+  }});
+}
+
 // ── Load a draft baseline back into the Planner for editing
 function blmOpenInPlanner(blId){
   const pid=S.proj?.id; if(!pid)return;
@@ -10650,6 +10702,9 @@ function renderBL(){
       }
       if(bl.status==='frozen'&&canCreate&&!pendingModify){
         actions+=`<button class="btn btn-ghost btn-sm btn-xs" onclick="event.stopPropagation();openModifyRequest('${bl.id}')" title="Request modification">✏️ Modify</button>`;
+      }
+      if(bl.status==='frozen'&&canCreate){
+        actions+=`<button class="btn btn-ghost btn-sm btn-xs" onclick="event.stopPropagation();blmRestoreBaseline('${bl.id}')" title="Restore: replace current task dates with this baseline's snapshot (with undo)">↺ Restore</button>`;
       }
       if(!bl.isActive){
         actions+=`<button class="btn btn-ghost btn-sm btn-xs" onclick="event.stopPropagation();blmSetActive('${bl.id}')" title="Set as active comparison baseline">Set Active</button>`;

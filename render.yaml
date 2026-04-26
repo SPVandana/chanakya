@@ -19,7 +19,7 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: DATA_DIR
-        value: /data               # Points to the persistent disk mount below
+        value: /app/data           # Points to the persistent disk mount below (matches Render's /app working dir convention)
       - key: GOOGLE_CLIENT_ID
         sync: false                # Set in Render dashboard; blueprint won't overwrite it
       - key: ALLOWED_ORIGINS
@@ -28,5 +28,5 @@ services:
         value: whitelotusgroup.in  # Anyone from this domain can sign in via Google
     disk:
       name: chanakya-data
-      mountPath: /data             # Persistent disk — SQLite DB survives every redeploy
+      mountPath: /app/data         # Persistent disk — SQLite DB survives every redeploy
       sizeGB: 1                    # ~$0.25/month; more than enough for SQLite
