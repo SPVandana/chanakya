@@ -15311,10 +15311,10 @@ window._validateTaskData=_validateTaskData;
 })();
 
 // Canary: marks the main script block as fully loaded. A SECOND script
-// below checks this flag — if it's missing, we know the main block got
-// truncated (e.g. by an unescaped </script> inside a template literal)
-// and show the user a clean recovery banner instead of raw JS leaking
-// through the page as HTML text.
+// below checks this flag. If it's missing, we know the main block was
+// terminated early (for example by an unescaped close-script tag inside
+// a template literal or comment) and we show the user a clean recovery
+// banner instead of raw JS leaking through the page as HTML text.
 window.__ckyMainLoaded = true;
 
 </script>
@@ -15326,9 +15326,10 @@ window.__ckyMainLoaded = true;
 // Runs in its own script context so it executes even if the main block
 // above was terminated prematurely by an HTML-parser trap. Three things
 // it guards against:
-//   1. </script> inside a template literal closes the main <script> early
-//   2. A hard JS syntax error in the main block halts execution
-//   3. The main block fails to download (e.g. connection dropped mid-file)
+//   1. A close-script tag inside a template literal or comment closes
+//      the main script block early (the very bug this canary detects).
+//   2. A hard JS syntax error in the main block halts execution.
+//   3. The main block fails to download (e.g. connection dropped mid-file).
 //
 // If the main block DID finish, window.__ckyMainLoaded and window.doLogin
 // are both defined — canary does nothing. If either is missing by the

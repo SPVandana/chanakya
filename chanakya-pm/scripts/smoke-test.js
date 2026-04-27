@@ -102,6 +102,23 @@ function checkStaticHtml() {
       fail(`Script block #${i + 1} contains a raw "</script>" token inside the JS — browser HTML parser will terminate the block early, killing every function defined after this point. Split it as "<\\/${'script'}>" or "'<\\/' + 'script>'".`);
     }
   });
+
+  // A2. Tag-balance check — exactly the same defence at a coarser grain.
+  //     Counts every <script ...> open tag and every </script> close tag in
+  //     the WHOLE file. If they don't match 1-to-1, somewhere a close tag
+  //     is sitting inside a JS comment, string, or template literal — even
+  //     if the per-block scan above missed it because extraction stopped
+  //     at the rogue token. This was the bug that broke production on
+  //     2026-04-24: a `</script>` inside a JS-comment line in the boot
+  //     canary closed the main script block early, and the per-block scan
+  //     reported clean because each truncated body parsed fine on its own.
+  const openCount  = (html.match(/<script\b/gi)  || []).length;
+  const closeCount = (html.match(/<\/script\s*>/gi) || []).length;
+  if (openCount !== closeCount) {
+    fail(`Tag-balance check failed — found ${openCount} <script> open tags but ${closeCount} </script> close tags. The extra close tag is sitting inside a JS comment / string / template literal and will be matched by the browser HTML parser, terminating the script block early. grep for "</script" outside <script> open/close lines to find it.`);
+  } else {
+    pass(`Script open/close tag balance OK (${openCount} of each)`);
+  }
   if (!failures.length) pass(`Script bodies scanned for raw </script> tokens (${scriptBodies.length} block${scriptBodies.length === 1 ? '' : 's'} OK)`);
 
   // B. Static JS syntax — concatenate the bodies and run node --check via
