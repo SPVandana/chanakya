@@ -13427,7 +13427,17 @@ function _parsePredecessor(s){
 }
 
 // ── Skip rows: blank, comment (#…), or header-row sentinel
-function _isComment(row){ const c=(row[0]||'').trim(); return c.startsWith('#'); }
+//    A row counts as a comment ONLY when:
+//      • the first cell starts with "# " (hash + space) — a real comment line, OR
+//      • the first cell is exactly "#" AND every other cell is empty
+//    This avoids false-positives like the Charge Infra Handover Summary
+//    where the first column header is literally "#" (a serial-number column).
+function _isComment(row){
+  const c=(row[0]||'').trim();
+  if(c.startsWith('# ')) return true;
+  if(c==='#' && row.slice(1).every(x=>!x||!String(x).trim())) return true;
+  return false;
+}
 function _isBlank(row){ return row.every(c=>!c||!c.trim()); }
 // Phase headers can appear in ANY column (Charge Infra puts them in ID; our
 // own template puts them in Activity Name). Scan every cell for the marker.

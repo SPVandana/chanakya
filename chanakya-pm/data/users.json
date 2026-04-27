@@ -28,7 +28,7 @@
     "email": "praveer.c@whitelotusgroup.in",
     "name": "Praveer C",
     "role": "Planner",
-    "permissions": "edit,manage",
+    "permissions": "edit,approve,manage",
     "passwordHash": "$2a$12$lHmGWQEzO1cQRQCVGD6Lbu6MqMT99SLssysutpy0iNA00lvYPU5sy"
   },
   {
