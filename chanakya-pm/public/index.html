@@ -13340,7 +13340,811 @@ function exportAll(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wlg-export.json';a.click();
 }
-function importAll(){ openMod('importMod'); renderImportMod(); }
+function importAll(){ openMod('importMod'); renderImpV2(); }
+
+// ═════════════════════════════════════════════════════════════════════════
+//  IMPORT SYSTEM v2 — Villa Metadata + Per-Villa Tasks + Restore Backup
+//  Two simple, opinionated CSV templates that mirror what the team
+//  already produces. Old import paths (gsheets/wlms/villas/tasks tabs)
+//  are still in the file but no longer wired to the import button.
+// ═════════════════════════════════════════════════════════════════════════
+
+const _IMPV2 = { tab:'villa', parsedVilla:null, parsedTasks:null, applyVillas:[], dupeMode:'replace-dates' };
+
+// ── CSV PARSER — handles quoted fields, escaped quotes, commas inside quotes
+function _csvParse(text){
+  const rows=[]; let row=[], field='', inQ=false;
+  text=text.replace(/\r\n?/g,'\n');
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){
+        if(text[i+1]==='"'){ field+='"'; i++; } else { inQ=false; }
+      } else field+=c;
+    } else {
+      if(c==='"'){ inQ=true; }
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else field+=c;
+    }
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  // Strip blank trailing rows
+  while(rows.length && rows[rows.length-1].every(c=>!c||!c.trim())) rows.pop();
+  return rows;
+}
+
+// ── Slugify a phase-header text into a stable phaseId
+function _slug(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'unassigned'; }
+
+// ── Parse a date in any of the common formats the team uses
+//    Returns YYYY-MM-DD, or '' on failure.
+const _MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,sept:8,oct:9,nov:10,dec:11};
+function _parseFlexDate(s){
+  s=String(s||'').trim();
+  if(!s) return '';
+  // Already ISO YYYY-MM-DD
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  // DD-MMM-YY or DD-MMM-YYYY (e.g. 02-Apr-26, 2-Apr-2026)
+  m = s.match(/^(\d{1,2})[-\s\/]([A-Za-z]{3,9})[-\s\/](\d{2,4})$/);
+  if(m){
+    const day=+m[1], mon=_MONTHS[m[2].toLowerCase().slice(0,3)];
+    let yr=+m[3]; if(yr<100) yr += yr<70 ? 2000 : 1900;
+    if(mon!==undefined && day>=1 && day<=31) return `${yr}-${String(mon+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  }
+  // DD/MM/YYYY or DD-MM-YYYY
+  m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+  if(m){
+    const day=+m[1], mon=+m[2];
+    let yr=+m[3]; if(yr<100) yr += yr<70 ? 2000 : 1900;
+    if(mon>=1 && mon<=12 && day>=1 && day<=31) return `${yr}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+// ── Add days to an ISO date string (UTC-safe via existing helper)
+function _addDaysToISO(d, n){ return d ? addDays(d, n) : ''; }
+
+// ── Parse a predecessor cell into structured deps.
+//    "3"           → [{id:'3', type:'FS', lag:0}]
+//    "3FS+7"       → [{id:'3', type:'FS', lag:7}]
+//    "3SS-2"       → [{id:'3', type:'SS', lag:-2}]
+//    "3FS,5SS+1"   → [{id:'3', type:'FS', lag:0},{id:'5', type:'SS', lag:1}]
+//    "—" / "0" / ""→ []
+function _parsePredecessor(s){
+  s=String(s||'').trim();
+  if(!s || s==='—' || s==='-' || s==='0' || s.toLowerCase()==='none') return [];
+  const out=[];
+  s.split(/[,;]/).forEach(part=>{
+    const p=part.trim(); if(!p) return;
+    const m=p.match(/^(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\s*\d+)?$/i);
+    if(m){
+      out.push({ id:m[1], type:(m[2]||'FS').toUpperCase(), lag: m[3]?parseInt(m[3].replace(/\s+/g,''),10):0 });
+    }
+  });
+  return out;
+}
+
+// ── Skip rows: blank, comment (#…), or header-row sentinel
+function _isComment(row){ const c=(row[0]||'').trim(); return c.startsWith('#'); }
+function _isBlank(row){ return row.every(c=>!c||!c.trim()); }
+// Phase headers can appear in ANY column (Charge Infra puts them in ID; our
+// own template puts them in Activity Name). Scan every cell for the marker.
+function _findPhaseHeaderInRow(row){
+  for(let i=0;i<row.length;i++){
+    const cell=String(row[i]||'').trim();
+    if(cell.startsWith('▌') || cell.startsWith('##')) return cell;
+  }
+  return '';
+}
+function _phaseFromHeader(h){
+  return String(h||'').replace(/^[▌#\s]+/,'').trim() || 'Unassigned Phase';
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+//  PARSER 1 — Villa Metadata CSV
+//  Produces { rows: [...], errors: [...], warnings: [...], headerMap }
+// ═════════════════════════════════════════════════════════════════════════
+function _parseVillaMetaCsv(text){
+  const out = { rows:[], errors:[], warnings:[] };
+  const raw = _csvParse(text);
+  if(!raw.length){ out.errors.push('File is empty.'); return out; }
+  // Find the actual header row by looking for one that contains a known header keyword.
+  // Skips banner / title rows that real export files (Charge Infra, etc.) put on top.
+  const villaHeaderHints = ['villa code','villa','code','villa id','villa name','block','contractor','start','excavation start'];
+  let headerIdx = raw.findIndex(r=>{
+    if(_isComment(r) || _isBlank(r)) return false;
+    const cells = r.map(c=>String(c||'').trim().toLowerCase());
+    return villaHeaderHints.some(h=>cells.includes(h));
+  });
+  if(headerIdx<0){ out.errors.push('No header row found. Expected a row containing "Villa Code" or similar — see the template.'); return out; }
+  const headers = raw[headerIdx].map(h=>String(h||'').trim().toLowerCase());
+
+  // Column resolution — accept several variations
+  const find = (...names)=>{
+    for(const n of names){
+      const i=headers.findIndex(h=>h===n.toLowerCase());
+      if(i>=0) return i;
+    }
+    return -1;
+  };
+  const col = {
+    code      : find('villa code','villa','code','villa id'),
+    name      : find('villa name','name'),
+    block     : find('block'),
+    zone      : find('zone'),
+    contractor: find('contractor'),
+    phase     : find('phase','p'),
+    saleStatus: find('sale status','status'),
+    excavStart: find('excavation start','excav start','start','excavation','start date'),
+    handover  : find('target handover','handover','end','end date','target completion'),
+    pm        : find('pm','project manager'),
+    ss        : find('site supervisor','ss','supervisor'),
+    budget    : find('budget (inr)','budget'),
+    area      : find('area (sqm)','area','plot area'),
+    notes     : find('notes','remarks'),
+  };
+  if(col.code<0){ out.errors.push('Required column "Villa Code" not found in header row.'); return out; }
+
+  for(let i=headerIdx+1;i<raw.length;i++){
+    const r=raw[i]; if(_isComment(r) || _isBlank(r)) continue;
+    const code=(r[col.code]||'').trim();
+    if(!code){ out.errors.push(`Row ${i+1}: Villa Code is required — row skipped.`); continue; }
+    const get=(k)=> col[k]>=0 ? (r[col[k]]||'').trim() : '';
+    const startISO = _parseFlexDate(get('excavStart'));
+    const endISO   = _parseFlexDate(get('handover'));
+    if(get('excavStart') && !startISO){
+      out.warnings.push(`Row ${i+1} (${code}): Excavation Start "${get('excavStart')}" not understood — left blank.`);
+    }
+    if(get('handover') && !endISO){
+      out.warnings.push(`Row ${i+1} (${code}): Target Handover "${get('handover')}" not understood — left blank.`);
+    }
+    out.rows.push({
+      code, _row:i+1,
+      name      : get('name') || code,
+      block     : get('block'),
+      zone      : get('zone'),
+      contractor: get('contractor'),
+      phase     : get('phase') || 'Phase 1',
+      saleStatus: get('saleStatus'),
+      start     : startISO,
+      end       : endISO,
+      pm        : get('pm'),
+      ss        : get('ss'),
+      budget    : Number(get('budget').replace(/[,\s]/g,''))||0,
+      area      : Number(get('area').replace(/[,\s]/g,''))||0,
+      notes     : get('notes'),
+      _hasExcavStart: !!startISO,
+    });
+  }
+  if(!out.rows.length && !out.errors.length) out.errors.push('No data rows found in file.');
+  return out;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+//  PARSER 2 — Per-Villa Tasks CSV
+//  Produces { tasks:[…template-tasks], errors:[], warnings:[],
+//             phaseGroups:[{name,count}] }
+//  Each template-task: { idRef, wbs, name, duration, predRefs:[…],
+//                        constraint, notes, phaseName, phaseId }
+// ═════════════════════════════════════════════════════════════════════════
+function _parseTasksCsv(text){
+  const out = { tasks:[], errors:[], warnings:[], phaseGroups:[] };
+  const raw = _csvParse(text);
+  if(!raw.length){ out.errors.push('File is empty.'); return out; }
+  // Skip banner / title rows by hunting for a header that mentions a known column.
+  const taskHeaderHints = ['activity name','activity','name','task','task name','wbs','duration (days)','duration','predecessor','predecessors'];
+  let headerIdx = raw.findIndex(r=>{
+    if(_isComment(r) || _isBlank(r)) return false;
+    const cells = r.map(c=>String(c||'').trim().toLowerCase().replace(/\s+/g,' '));
+    return taskHeaderHints.some(h=>cells.includes(h));
+  });
+  if(headerIdx<0){ out.errors.push('No header row found. Expected a row containing "Activity Name" or similar — see the template.'); return out; }
+  const headers = raw[headerIdx].map(h=>String(h||'').trim().toLowerCase().replace(/\s+/g,' '));
+  const find = (...names)=>{
+    for(const n of names){
+      const i=headers.findIndex(h=>h===n.toLowerCase());
+      if(i>=0) return i;
+    }
+    return -1;
+  };
+  const col = {
+    id         : find('id','#','activity id'),
+    wbs        : find('wbs'),
+    name       : find('activity name','name','task','task name','activity'),
+    duration   : find('duration (days)','duration','days'),
+    predecessor: find('predecessor','predecessor (id + type + lag)','predecessors','depends on'),
+    constraint : find('constraint','constraint / notes'),
+    notes      : find('notes','comment','comments','remarks'),
+  };
+  if(col.name<0){ out.errors.push('Required column "Activity Name" not found in header row.'); return out; }
+
+  let currentPhase = 'Unassigned Phase';
+  let autoId = 0;
+  const phaseCounts = new Map();
+
+  for(let i=headerIdx+1;i<raw.length;i++){
+    const r=raw[i]; if(_isComment(r) || _isBlank(r)) continue;
+
+    // Phase header row? (marker can appear in any cell)
+    const phHeader = _findPhaseHeaderInRow(r);
+    if(phHeader){
+      currentPhase = _phaseFromHeader(phHeader);
+      continue;
+    }
+    const get=(k)=> col[k]>=0 ? (r[col[k]]||'').trim() : '';
+    const nameCell = get('name');
+    if(!nameCell){
+      out.errors.push(`Row ${i+1}: Activity Name is required — row skipped.`);
+      continue;
+    }
+    autoId++;
+    const idRef = get('id') || String(autoId);
+    let dur = parseInt(get('duration'),10);
+    let durDefaulted = false;
+    if(!Number.isFinite(dur) || dur<1){ dur = 1; durDefaulted = true; }
+    const predRefs = _parsePredecessor(get('predecessor'));
+    const constraintRaw = (get('constraint')||'').toLowerCase().split(/[\s\/]/)[0];
+    const constraint = ['asap','alap','mso','mfo','snet','fnet'].includes(constraintRaw) ? constraintRaw : 'asap';
+
+    if(durDefaulted) out.warnings.push(`Row ${i+1} (${nameCell}): Duration missing or invalid — defaulted to 1 day.`);
+    if(get('predecessor') && !predRefs.length && !['—','-','0',''].includes(get('predecessor').trim().toLowerCase())){
+      out.warnings.push(`Row ${i+1} (${nameCell}): Predecessor "${get('predecessor')}" couldn't be parsed — treated as no predecessor.`);
+    }
+
+    const phaseId = _slug(currentPhase);
+    out.tasks.push({
+      idRef, wbs:get('wbs'), name:nameCell, duration:dur,
+      predRefs, constraint, notes:get('notes'),
+      phaseName: currentPhase, phaseId,
+    });
+    phaseCounts.set(currentPhase, (phaseCounts.get(currentPhase)||0)+1);
+  }
+
+  out.phaseGroups = [...phaseCounts.entries()].map(([name,count])=>({name,count}));
+
+  // Validate predecessor refs point to existing IDs
+  const idSet = new Set(out.tasks.map(t=>t.idRef));
+  out.tasks.forEach(t=>{
+    t.predRefs = t.predRefs.filter(p=>{
+      if(idSet.has(p.id)) return true;
+      out.warnings.push(`Task "${t.name}": predecessor refers to unknown ID ${p.id}${p.type!=='FS'?p.type:''}${p.lag?(p.lag>0?'+':'')+p.lag:''} — link skipped.`);
+      return false;
+    });
+  });
+
+  // Near-duplicate phase name check (case/punctuation)
+  const phNames = [...phaseCounts.keys()];
+  const phNorm  = phNames.map(n=>n.toLowerCase().replace(/[^a-z0-9]/g,''));
+  for(let a=0;a<phNames.length;a++){
+    for(let b=a+1;b<phNames.length;b++){
+      if(phNorm[a]===phNorm[b]){
+        out.warnings.push(`Phase names "${phNames[a]}" and "${phNames[b]}" look similar but are stored as different phases. Edit the CSV if they should be merged.`);
+      }
+    }
+  }
+  if(!out.tasks.length && !out.errors.length) out.errors.push('No task rows found in file.');
+  return out;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+//  COMMIT — apply parsed Villa Metadata to the project store
+//  Returns { created, updated, errors }
+// ═════════════════════════════════════════════════════════════════════════
+function _commitVillaMetaImport(rows){
+  const projs = Store.getProjects();
+  let created=0, updated=0;
+  rows.forEach(r=>{
+    const code = r.code;
+    // Try to match by id first, then by code, then by name (case-insensitive)
+    let pid = projs[code] ? code : null;
+    if(!pid){
+      const match = Object.values(projs).find(p=>(p.code||'').toLowerCase()===code.toLowerCase() || (p.name||'').toLowerCase()===code.toLowerCase());
+      if(match) pid = match.id;
+    }
+    if(!pid){
+      pid = code; // use the code as the ID for new villas
+      if(projs[pid]){ pid = code+'-'+Date.now().toString(36).slice(-4); }
+      projs[pid] = {
+        id:pid, code:r.code, name:r.name, type:'villa',
+        dev:'Amanvana', phase:r.phase || 'Phase 1', status:'not-started',
+        start:r.start||'', end:r.end||'', plannedStart:r.start||'', plannedEnd:r.end||'',
+        actualStart:'', actualEnd:'',
+        pm:r.pm||'', ss:r.ss||'', budget:r.budget||0, area:r.area||0,
+        notes:r.notes||'', contractor:'', contractorName:r.contractor||'',
+        zone:r.zone||'', block:r.block||'',
+      };
+      created++;
+    } else {
+      const p = projs[pid];
+      if(r.name) p.name = r.name;
+      if(r.start) p.start = r.start;
+      if(r.end)   p.end   = r.end;
+      if(r.phase) p.phase = r.phase;
+      if(r.contractor) p.contractorName = r.contractor;
+      if(r.zone)   p.zone  = r.zone;
+      if(r.block)  p.block = r.block;
+      if(r.pm)     p.pm    = r.pm;
+      if(r.ss)     p.ss    = r.ss;
+      if(r.budget) p.budget = r.budget;
+      if(r.area)   p.area   = r.area;
+      if(r.notes)  p.notes  = r.notes;
+      if(r.saleStatus){
+        // Append sale status to notes if not already present
+        if(!(p.notes||'').toLowerCase().includes(r.saleStatus.toLowerCase())){
+          p.notes = (p.notes ? p.notes+' | ' : '') + r.saleStatus;
+        }
+      }
+      updated++;
+    }
+  });
+  Store.saveProjects(projs); Store.flush();
+  _logAudit('import','development', '', `Villa Metadata: ${created} created, ${updated} updated`);
+  return { created, updated };
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+//  COMMIT — apply parsed Task Template to one or more villas
+//  Resolves predecessor refs into real task IDs per villa,
+//  computes start/end dates from each villa's anchor, runs through the
+//  same merge semantics as everywhere else.
+//  Modes: 'replace-dates' | 'replace-all' | 'skip-duplicates'
+// ═════════════════════════════════════════════════════════════════════════
+function _commitTaskTemplateImport(template, villaIds, mode){
+  mode = mode || 'replace-dates';
+  const projs = Store.getProjects();
+  const summary = { villas:0, tasksCreated:0, tasksUpdated:0, tasksSkipped:0, anchorMissing:[] };
+  villaIds.forEach(pid=>{
+    const proj = projs[pid]; if(!proj) return;
+    const anchor = proj.start || proj.plannedStart;
+    if(!anchor){ summary.anchorMissing.push(pid); return; }
+
+    // Compute scheduled dates per template task using a topo-sort traversal
+    // honouring duration + predecessor type + lag.
+    const byRef = new Map(); // idRef → computed task
+    template.forEach(t=>{ byRef.set(t.idRef, { ...t, _computed:false, _start:'', _end:'' }); });
+
+    const computeOne = (tRef)=>{
+      const t = byRef.get(tRef); if(!t || t._computed) return t;
+      let earliestStart = anchor; // default — start at project anchor
+      t.predRefs.forEach(p=>{
+        const dep = computeOne(p.id); if(!dep) return;
+        let candidate;
+        if(p.type==='FS'){ candidate = _addDaysToISO(dep._end, p.lag); }
+        else if(p.type==='SS'){ candidate = _addDaysToISO(dep._start, p.lag); }
+        else if(p.type==='FF'){ candidate = _addDaysToISO(dep._end, p.lag - (t.duration-1)); }
+        else if(p.type==='SF'){ candidate = _addDaysToISO(dep._start, p.lag - (t.duration-1)); }
+        if(candidate && candidate>earliestStart) earliestStart = candidate;
+      });
+      t._start = earliestStart;
+      t._end   = _addDaysToISO(t._start, Math.max(0, t.duration-1));
+      t._computed = true;
+      return t;
+    };
+    template.forEach(t=>computeOne(t.idRef));
+
+    // Build final task objects with stable IDs (deterministic per villa+idRef)
+    const liveTasks = Store.getTasksByProject(pid).filter(t=>!t.isGroupHeader);
+    const liveByName = new Map(liveTasks.map(t=>[t.name.toLowerCase(), t]));
+    const refToFinalId = new Map();
+    const newTasks = [];
+    template.forEach(t=>{
+      const c = byRef.get(t.idRef); if(!c) return;
+      const existing = liveByName.get(t.name.toLowerCase());
+      let finalId, isNew;
+      if(existing){
+        finalId = existing.id; isNew = false;
+        if(mode==='skip-duplicates'){ summary.tasksSkipped++; refToFinalId.set(t.idRef, finalId); return; }
+      } else {
+        finalId = pid + '-T' + (Date.now().toString(36) + Math.random().toString(36).slice(2,5));
+        isNew = true;
+      }
+      refToFinalId.set(t.idRef, finalId);
+      const taskObj = {
+        id: finalId, projectId: pid,
+        name: t.name,
+        phaseName: t.phaseName, phaseId: t.phaseId,
+        subphaseName: '', subphaseId: '',
+        startDate: c._start, endDate: c._end, duration: t.duration,
+        progress: existing && mode==='replace-dates' ? existing.progress : 0,
+        status: existing && mode==='replace-dates' ? existing.status : 'not-started',
+        priority: existing && mode==='replace-dates' ? existing.priority : 'medium',
+        assignee: existing && mode==='replace-dates' ? existing.assignee : 'Site Team',
+        actualStartDate: existing && mode==='replace-dates' ? existing.actualStartDate : '',
+        actualEndDate:   existing && mode==='replace-dates' ? existing.actualEndDate   : '',
+        cost: existing && mode==='replace-dates' ? existing.cost : 0,
+        milestone: t.duration<=0 || /\bmilestone\b/i.test(t.notes||'') ? 1 : 0,
+        inspectionRequired: existing ? existing.inspectionRequired : 0,
+        constraint: t.constraint, notes: t.notes,
+        predecessors: [], // filled below after we know all final IDs
+        baselineStart:'', baselineEnd:'', baselineSet:false,
+      };
+      newTasks.push({ task: taskObj, predRefs: t.predRefs, isNew });
+    });
+    // Resolve predecessors using the ref map
+    newTasks.forEach(({task,predRefs})=>{
+      task.predecessors = predRefs.map(p=>({ id: refToFinalId.get(p.id) || '', type:p.type, lag:p.lag })).filter(p=>p.id);
+    });
+
+    // Merge with live tasks. In 'replace-all' mode we replace the whole task list;
+    // otherwise we keep tasks not in template and update/insert template tasks.
+    let mergedTasks;
+    if(mode==='replace-all'){
+      mergedTasks = newTasks.map(x=>x.task);
+    } else {
+      const newById = new Map(newTasks.map(x=>[x.task.id, x.task]));
+      mergedTasks = liveTasks.map(t=> newById.has(t.id) ? newById.get(t.id) : t);
+      // Append newly created tasks not in liveTasks
+      newTasks.forEach(({task,isNew})=>{ if(isNew) mergedTasks.push(task); });
+    }
+    newTasks.forEach(({isNew})=>{ if(isNew) summary.tasksCreated++; else summary.tasksUpdated++; });
+    Store.saveProjectTasks(pid, mergedTasks);
+    syncProjStatus(pid);
+    summary.villas++;
+  });
+  Store.flush();
+  if(S.tab==='tg' && S.proj && villaIds.includes(S.proj.id)) renderGantt();
+  if(S.proj && villaIds.includes(S.proj.id)){ renderWBS(); renderDetStats(); }
+  _refreshViews({sb:true});
+  _logAudit('import','task','', `Tasks template applied: ${summary.tasksCreated} created, ${summary.tasksUpdated} updated across ${summary.villas} villa${summary.villas===1?'':'s'}`);
+  return summary;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+//  TEMPLATE DOWNLOADS — emit the two CSVs from in-memory strings.
+//  Single source of truth: keep these in sync with docs/templates/*.csv
+// ═════════════════════════════════════════════════════════════════════════
+const _TPL_VILLA_META = `# CHANAKYA — VILLA METADATA TEMPLATE  |  one row per villa
+# Required: Villa Code.  Recommended: Excavation Start.
+# Date format: DD-MMM-YY (e.g. 02-Apr-26).  YYYY-MM-DD and DD/MM/YYYY also accepted.
+# Delete these comment lines (#…) before uploading if you like — they're ignored either way.
+Villa Code,Villa Name,Block,Zone,Contractor,Phase,Sale Status,Excavation Start,Target Handover,PM,Site Supervisor,Budget (INR),Area (sqm),Notes
+V32,V32,Block 10,Zone 2,Charge Infra,Phase 1,Sold,02-Apr-26,26-Apr-28,Vandana P,Stanly John,40000000,480,Premium plot
+V33,V33,Block 10,Zone 2,Charge Infra,Phase 1,Unsold,02-Apr-26,26-Apr-28,Vandana P,Stanly John,40000000,480,
+V34,V34,Block 10,Zone 2,Charge Infra,Phase 1,Sold,11-Apr-26,05-May-28,Praveer C,Stanly John,40000000,480,
+`;
+
+const _TPL_TASKS = `# CHANAKYA — PER-VILLA TASK TEMPLATE
+# Required: Activity Name.  Recommended: Duration (Days).
+# Phase headers: any row whose Activity Name starts with "▌" is a section header.
+# Predecessor format:  3FS+7  =  After Activity 3 finishes, wait 7 days, then start.
+#                      3SS    =  Start with Activity 3.   3FF  =  Finish with Activity 3.
+#                      Empty / "—" / "0"  =  no predecessor.
+# Multiple deps: comma-separate, e.g. "3FS,5SS+1"
+ID,WBS,Activity Name,Duration (Days),Predecessor,Constraint,Notes
+,,▌ FOUNDATION,,,,
+1,S.1,Earthwork Excavation,5,,,
+2,S.2,Footing PCC,1,1FS,,
+3,S.3,Footing Reinforcement,5,2FS+7,,7-day cure
+4,S.4,Footing Concrete,1,3FS,,
+,,▌ STRUCTURE,,,,
+5,S.5,GF Columns,6,4FS,,
+6,S.6,GF Slab Concrete ★,1,5FS+7,,Milestone
+7,S.7,FF Columns,6,6FS+14,,
+8,S.8,FF Slab Concrete ★,1,7FS+7,,Milestone
+,,▌ FINISHES,,,,
+9,S.9,Internal Plastering,10,8FS+14,,
+10,S.10,Tile Flooring,8,9FS,,
+,,▌ HANDOVER,,,,
+11,S.11,Snagging,2,10FS+3,,
+12,S.12,Client Handover ★,1,11FS,,Final milestone
+`;
+
+function impv2DownloadTemplate(which){
+  const csv = which==='villa' ? _TPL_VILLA_META : _TPL_TASKS;
+  const filename = which==='villa' ? 'Chanakya - Villa Metadata Template.csv' : 'Chanakya - Per-Villa Tasks Template.csv';
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+//  UI — render the new 3-tab modal contents into #importMod
+// ═════════════════════════════════════════════════════════════════════════
+function renderImpV2(){
+  // Keep the existing modal shell; replace its body with v2 layout.
+  const mod = document.getElementById('importMod');
+  if(!mod) return;
+  const shell = mod.querySelector('.modal') || mod.firstElementChild;
+  if(!shell) return;
+  shell.style.cssText = 'width:780px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column';
+  shell.innerHTML = `
+    <div class="mhdr" style="border-bottom:1px solid var(--border)">
+      <div class="mtitle">Import Data</div>
+      <button class="mclose" onclick="closeMod('importMod')">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border)">
+      <button id="impv2-tab-villa"   class="btn btn-sm btn-primary" onclick="impv2SwitchTab('villa')">🏡 Villa Metadata</button>
+      <button id="impv2-tab-tasks"   class="btn btn-sm btn-ghost"   onclick="impv2SwitchTab('tasks')">📋 Per-Villa Tasks</button>
+      <button id="impv2-tab-restore" class="btn btn-sm btn-ghost"   onclick="impv2SwitchTab('restore')">♻ Restore Backup</button>
+    </div>
+    <div id="impv2-body" style="flex:1;overflow-y:auto;padding:18px"></div>
+  `;
+  _IMPV2.tab = _IMPV2.tab || 'villa';
+  _renderImpV2Body();
+}
+
+function impv2SwitchTab(t){
+  _IMPV2.tab = t;
+  _IMPV2.parsedVilla = null; _IMPV2.parsedTasks = null;
+  ['villa','tasks','restore'].forEach(x=>{
+    const b=document.getElementById('impv2-tab-'+x);
+    if(b) b.className = 'btn btn-sm '+(x===t?'btn-primary':'btn-ghost');
+  });
+  _renderImpV2Body();
+}
+
+function _renderImpV2Body(){
+  const body = document.getElementById('impv2-body'); if(!body) return;
+  if(_IMPV2.tab==='villa')   return _renderImpV2Villa(body);
+  if(_IMPV2.tab==='tasks')   return _renderImpV2Tasks(body);
+  if(_IMPV2.tab==='restore') return _renderImpV2Restore(body);
+}
+
+function _renderImpV2Villa(body){
+  const parsed = _IMPV2.parsedVilla;
+  body.innerHTML = `
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">
+      Upload a CSV with one row per villa to create new villas or update existing ones.
+      Only <strong>Villa Code</strong> is required; everything else has sensible defaults.
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <button class="btn btn-ghost btn-sm" onclick="impv2DownloadTemplate('villa')">⬇ Download template (CSV)</button>
+      <span style="font-size:11px;color:var(--text-light)">Pre-filled with sample rows your team will recognise.</span>
+    </div>
+    <input type="file" id="impv2-villa-file" accept=".csv" onchange="impv2VillaFileChosen(this)" style="margin-bottom:12px;font-size:12px">
+    <div id="impv2-villa-preview"></div>
+  `;
+  if(parsed) _renderImpV2VillaPreview(parsed);
+}
+
+function _renderImpV2Tasks(body){
+  const parsed = _IMPV2.parsedTasks;
+  body.innerHTML = `
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">
+      Upload a per-villa task template — applies the task list (with full predecessor logic)
+      to one or more villas. Each villa's dates are anchored to its own <em>Excavation Start</em>.
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <button class="btn btn-ghost btn-sm" onclick="impv2DownloadTemplate('tasks')">⬇ Download template (CSV)</button>
+      <span style="font-size:11px;color:var(--text-light)">Section headers like "▌ FOUNDATION" group tasks by phase.</span>
+    </div>
+    <input type="file" id="impv2-tasks-file" accept=".csv" onchange="impv2TasksFileChosen(this)" style="margin-bottom:12px;font-size:12px">
+    <div id="impv2-tasks-preview"></div>
+  `;
+  if(parsed) _renderImpV2TasksPreview(parsed);
+}
+
+function _renderImpV2Restore(body){
+  body.innerHTML = `
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">
+      Re-load a full JSON backup (downloaded earlier from <strong>Export → Full Backup</strong>).
+      <strong style="color:var(--danger)">This replaces ALL current data.</strong> A snapshot of the current state is captured first so you can undo within 20 seconds.
+    </div>
+    <input type="file" id="impv2-restore-file" accept=".json,application/json" onchange="impv2RestoreFileChosen(this)" style="margin-bottom:12px;font-size:12px">
+    <div id="impv2-restore-status" style="font-size:12px;color:var(--text-muted)"></div>
+  `;
+}
+
+// ── Villa Metadata file flow
+function impv2VillaFileChosen(inp){
+  const f=inp.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const text=ev.target.result;
+    _IMPV2.parsedVilla = _parseVillaMetaCsv(text);
+    _renderImpV2VillaPreview(_IMPV2.parsedVilla);
+  };
+  reader.readAsText(f);
+}
+
+function _renderImpV2VillaPreview(parsed){
+  const out = document.getElementById('impv2-villa-preview'); if(!out) return;
+  const errs = parsed.errors, warns = parsed.warnings, rows = parsed.rows;
+  // Existing villas — to show "create vs update" preview counts
+  const projs = Store.getProjects();
+  let willCreate=0, willUpdate=0;
+  rows.forEach(r=>{
+    const code=r.code;
+    const exists = projs[code] || Object.values(projs).some(p=>(p.code||'').toLowerCase()===code.toLowerCase() || (p.name||'').toLowerCase()===code.toLowerCase());
+    if(exists) willUpdate++; else willCreate++;
+  });
+  out.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:var(--surface2)">
+      <div style="font-weight:700;margin-bottom:8px;font-size:13px">Preview</div>
+      <div style="display:flex;gap:18px;font-size:12px;margin-bottom:10px">
+        <div><span style="color:var(--success);font-weight:700">${willCreate}</span> new villa${willCreate===1?'':'s'}</div>
+        <div><span style="color:var(--accent);font-weight:700">${willUpdate}</span> existing villa${willUpdate===1?'':'s'} to update</div>
+        ${warns.length?`<div><span style="color:var(--warning);font-weight:700">${warns.length}</span> warning${warns.length===1?'':'s'}</div>`:''}
+        ${errs.length?`<div><span style="color:var(--danger);font-weight:700">${errs.length}</span> error${errs.length===1?'':'s'}</div>`:''}
+      </div>
+      ${errs.length?`<div style="background:var(--danger-pale);border-left:3px solid var(--danger);padding:8px 12px;margin-bottom:8px;font-size:11.5px;color:var(--danger);max-height:120px;overflow-y:auto">
+        ${errs.map(e=>`<div>• ${escHtml(e)}</div>`).join('')}
+      </div>`:''}
+      ${warns.length?`<div style="background:var(--warning-pale);border-left:3px solid var(--warning);padding:8px 12px;margin-bottom:8px;font-size:11.5px;color:var(--warning);max-height:120px;overflow-y:auto">
+        ${warns.slice(0,15).map(w=>`<div>• ${escHtml(w)}</div>`).join('')}
+        ${warns.length>15?`<div style="opacity:.7">…and ${warns.length-15} more</div>`:''}
+      </div>`:''}
+      ${rows.length?`<div style="max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:5px">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead style="background:var(--surface3);position:sticky;top:0">
+            <tr><th style="padding:5px 8px;text-align:left">Villa</th><th style="padding:5px 8px;text-align:left">Block</th><th style="padding:5px 8px;text-align:left">Contractor</th><th style="padding:5px 8px;text-align:left">Excav Start</th><th style="padding:5px 8px;text-align:left">Action</th></tr>
+          </thead>
+          <tbody>
+            ${rows.slice(0,50).map(r=>{
+              const exists = projs[r.code] || Object.values(projs).some(p=>(p.code||'').toLowerCase()===r.code.toLowerCase() || (p.name||'').toLowerCase()===r.code.toLowerCase());
+              const action = exists ? '<span style="color:var(--accent)">Update</span>' : '<span style="color:var(--success)">Create</span>';
+              const noStart = !r._hasExcavStart ? ' <span style="color:var(--warning);font-size:10px">(no start date)</span>' : '';
+              return `<tr><td style="padding:4px 8px">${escHtml(r.code)} <span style="color:var(--text-muted)">${escHtml(r.name)}</span>${noStart}</td><td style="padding:4px 8px">${escHtml(r.block)}</td><td style="padding:4px 8px">${escHtml(r.contractor)}</td><td style="padding:4px 8px">${r.start||'-'}</td><td style="padding:4px 8px">${action}</td></tr>`;
+            }).join('')}
+            ${rows.length>50?`<tr><td colspan="5" style="padding:6px;text-align:center;color:var(--text-muted)">…and ${rows.length-50} more rows</td></tr>`:''}
+          </tbody>
+        </table>
+      </div>`:''}
+    </div>
+    ${rows.length?`<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeMod('importMod')">Cancel</button>
+      <button class="btn btn-primary" onclick="impv2CommitVilla()">Import ${rows.length} villa${rows.length===1?'':'s'}</button>
+    </div>`:''}
+  `;
+}
+
+function impv2CommitVilla(){
+  const parsed = _IMPV2.parsedVilla; if(!parsed || !parsed.rows.length) return;
+  // Snapshot for undo
+  const snapshot = JSON.parse(JSON.stringify(Store.getProjects()));
+  const { created, updated } = _commitVillaMetaImport(parsed.rows);
+  closeMod('importMod');
+  _refreshViews({sb:true});
+  toast(`Imported: ${created} created, ${updated} updated`,'success',20000,{label:'Undo',fn:()=>{
+    Store.saveProjects(snapshot); Store.flush(); _refreshViews({sb:true});
+    toast('Villa import undone','success');
+  }});
+}
+
+// ── Per-Villa Tasks file flow
+function impv2TasksFileChosen(inp){
+  const f=inp.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const text=ev.target.result;
+    _IMPV2.parsedTasks = _parseTasksCsv(text);
+    // Default villa selection: the currently-open villa, if any
+    _IMPV2.applyVillas = S.proj ? [S.proj.id] : [];
+    _IMPV2.dupeMode = 'replace-dates';
+    _renderImpV2TasksPreview(_IMPV2.parsedTasks);
+  };
+  reader.readAsText(f);
+}
+
+function _renderImpV2TasksPreview(parsed){
+  const out = document.getElementById('impv2-tasks-preview'); if(!out) return;
+  const errs = parsed.errors, warns = parsed.warnings, tasks = parsed.tasks;
+  const projs = Store.getProjects();
+  // Eligible villas: have a start date
+  const villaList = Object.values(projs).filter(p=>p.type!=='phase-summary' && (p.start||p.plannedStart))
+                    .sort((a,b)=>(a.dev||'').localeCompare(b.dev||'') || (a.name||'').localeCompare(b.name||''));
+  out.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:var(--surface2);margin-bottom:14px">
+      <div style="font-weight:700;margin-bottom:8px;font-size:13px">Template parsed</div>
+      <div style="display:flex;gap:18px;font-size:12px;margin-bottom:10px">
+        <div><span style="color:var(--success);font-weight:700">${tasks.length}</span> task${tasks.length===1?'':'s'}</div>
+        <div><span style="color:var(--accent);font-weight:700">${parsed.phaseGroups.length}</span> phase${parsed.phaseGroups.length===1?'':'s'}</div>
+        ${warns.length?`<div><span style="color:var(--warning);font-weight:700">${warns.length}</span> warning${warns.length===1?'':'s'}</div>`:''}
+        ${errs.length?`<div><span style="color:var(--danger);font-weight:700">${errs.length}</span> error${errs.length===1?'':'s'}</div>`:''}
+      </div>
+      ${errs.length?`<div style="background:var(--danger-pale);border-left:3px solid var(--danger);padding:8px 12px;margin-bottom:8px;font-size:11.5px;color:var(--danger);max-height:100px;overflow-y:auto">
+        ${errs.map(e=>`<div>• ${escHtml(e)}</div>`).join('')}
+      </div>`:''}
+      ${warns.length?`<div style="background:var(--warning-pale);border-left:3px solid var(--warning);padding:8px 12px;margin-bottom:8px;font-size:11.5px;color:var(--warning);max-height:140px;overflow-y:auto">
+        ${warns.slice(0,15).map(w=>`<div>• ${escHtml(w)}</div>`).join('')}
+        ${warns.length>15?`<div style="opacity:.7">…and ${warns.length-15} more</div>`:''}
+      </div>`:''}
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Phases detected:</div>
+      <div style="font-size:11px;line-height:1.7">${parsed.phaseGroups.map(g=>`<span style="display:inline-block;background:var(--surface3);border-radius:10px;padding:2px 8px;margin-right:4px">${escHtml(g.name)} (${g.count})</span>`).join('')}</div>
+    </div>
+    ${tasks.length?`
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:var(--surface);margin-bottom:14px">
+      <div style="font-weight:700;margin-bottom:8px;font-size:13px">Apply to which villa(s)?</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="btn btn-ghost btn-sm" onclick="impv2SelectVillas('all')">Select all</button>
+        <button class="btn btn-ghost btn-sm" onclick="impv2SelectVillas('none')">Clear</button>
+        <button class="btn btn-ghost btn-sm" onclick="impv2SelectVillas('current')">Just current villa</button>
+      </div>
+      <div style="max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:5px;padding:8px;background:var(--surface2)">
+        ${villaList.length===0?`<div style="font-size:11px;color:var(--text-muted);padding:8px">No villas have a start date set yet. Add or import villa metadata first.</div>`:
+          villaList.map(p=>{
+            const checked = _IMPV2.applyVillas.includes(p.id) ? 'checked':'';
+            return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 0;cursor:pointer">
+              <input type="checkbox" value="${escHtml(p.id)}" ${checked} onchange="impv2ToggleVilla('${escHtml(p.id)}',this.checked)">
+              ${escHtml(p.name)} <span style="color:var(--text-muted);font-size:11px">${escHtml(p.dev||'')} · start ${p.start||p.plannedStart||'-'}</span>
+            </label>`;
+          }).join('')}
+      </div>
+      <div style="margin-top:12px;font-size:12px">
+        <strong>If a task already exists in the villa:</strong>
+        <div style="margin-top:6px">
+          <label style="display:block;font-size:11.5px;margin-bottom:3px"><input type="radio" name="impv2-dupe" value="replace-dates"  ${_IMPV2.dupeMode==='replace-dates'?'checked':''} onchange="_IMPV2.dupeMode=this.value"> Replace dates only — keep progress, status, actual dates <em style="color:var(--text-muted)">(recommended)</em></label>
+          <label style="display:block;font-size:11.5px;margin-bottom:3px"><input type="radio" name="impv2-dupe" value="replace-all"     ${_IMPV2.dupeMode==='replace-all'?'checked':''}    onchange="_IMPV2.dupeMode=this.value"> Replace everything — full overwrite (loses live progress)</label>
+          <label style="display:block;font-size:11.5px"><input type="radio" name="impv2-dupe" value="skip-duplicates" ${_IMPV2.dupeMode==='skip-duplicates'?'checked':''} onchange="_IMPV2.dupeMode=this.value"> Skip duplicates — only add new tasks</label>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeMod('importMod')">Cancel</button>
+      <button class="btn btn-primary" onclick="impv2CommitTasks()" ${_IMPV2.applyVillas.length===0?'disabled':''}>Apply ${tasks.length} task${tasks.length===1?'':'s'} × ${_IMPV2.applyVillas.length} villa${_IMPV2.applyVillas.length===1?'':'s'}</button>
+    </div>`:''}
+  `;
+}
+
+function impv2SelectVillas(mode){
+  const projs = Store.getProjects();
+  const villaList = Object.values(projs).filter(p=>p.type!=='phase-summary' && (p.start||p.plannedStart));
+  if(mode==='all')      _IMPV2.applyVillas = villaList.map(p=>p.id);
+  else if(mode==='none') _IMPV2.applyVillas = [];
+  else if(mode==='current') _IMPV2.applyVillas = S.proj ? [S.proj.id] : [];
+  _renderImpV2TasksPreview(_IMPV2.parsedTasks);
+}
+function impv2ToggleVilla(pid, on){
+  const set = new Set(_IMPV2.applyVillas);
+  if(on) set.add(pid); else set.delete(pid);
+  _IMPV2.applyVillas = [...set];
+  // Update only the apply count without full re-render to keep scroll position
+  const btn = document.querySelector('#impv2-tasks-preview .btn-primary');
+  if(btn){
+    btn.textContent = `Apply ${_IMPV2.parsedTasks.tasks.length} task${_IMPV2.parsedTasks.tasks.length===1?'':'s'} × ${_IMPV2.applyVillas.length} villa${_IMPV2.applyVillas.length===1?'':'s'}`;
+    btn.disabled = _IMPV2.applyVillas.length===0;
+  }
+}
+function impv2CommitTasks(){
+  const parsed = _IMPV2.parsedTasks; if(!parsed || !parsed.tasks.length) return;
+  const villaIds = _IMPV2.applyVillas; if(!villaIds.length){ toast('Select at least one villa','warning');return; }
+  if(parsed.tasks.length * villaIds.length > 200){
+    if(!confirm(`This will create or update ${parsed.tasks.length * villaIds.length} task instances across ${villaIds.length} villas. Continue?`)) return;
+  }
+  // Snapshot for undo — capture every affected villa's tasks
+  const snapshot = villaIds.map(pid => ({ pid, tasks: Store.getTasksByProject(pid).map(t=>({...t})) }));
+  const summary = _commitTaskTemplateImport(parsed.tasks, villaIds, _IMPV2.dupeMode);
+  closeMod('importMod');
+  let msg = `Applied template to ${summary.villas} villa${summary.villas===1?'':'s'} — ${summary.tasksCreated} created, ${summary.tasksUpdated} updated`;
+  if(summary.tasksSkipped) msg += `, ${summary.tasksSkipped} skipped`;
+  if(summary.anchorMissing.length) msg += ` · ${summary.anchorMissing.length} villa${summary.anchorMissing.length===1?'':'s'} skipped (no start date)`;
+  toast(msg,'success',20000,{label:'Undo',fn:()=>{
+    snapshot.forEach(s=>{ Store.saveProjectTasks(s.pid, s.tasks); syncProjStatus(s.pid); });
+    Store.flush(); _refreshViews({sb:true});
+    if(S.proj && villaIds.includes(S.proj.id)){ renderWBS(); renderDetStats(); if(S.tab==='tg') renderGantt(); }
+    toast('Task import undone','success');
+  }});
+}
+
+// ── Restore Backup file flow (JSON full restore)
+function impv2RestoreFileChosen(inp){
+  const f=inp.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    let data;
+    try { data = JSON.parse(ev.target.result); }
+    catch(e){ document.getElementById('impv2-restore-status').textContent = 'Invalid JSON file: '+e.message; return; }
+    if(!data || typeof data!=='object'){ document.getElementById('impv2-restore-status').textContent = 'JSON must be an object.'; return; }
+    if(!confirm(`Restore backup? This REPLACES all current data:\n\n  Villas:    ${data.projs?Object.keys(data.projs).length:0}\n  Tasks:     ${data.tasks?Object.values(data.tasks).reduce((a,t)=>a+(t?.length||0),0):0}\n  Resources: ${data.resources?Object.keys(data.resources).length:0}\n\nA snapshot of the current state will be captured for undo (20 seconds).`)) return;
+    const snapshot = { projs:Store.getProjects(), tasks:Store.getAllTasks(), resources:Store.getResources() };
+    if(data.projs)      Store.saveProjects(data.projs);
+    if(data.tasks)      Store.saveTasksMap(data.tasks);
+    if(data.resources)  Store.saveResources(data.resources);
+    Store.flush();
+    _refreshViews({sb:true});
+    closeMod('importMod');
+    _logAudit('import','data','', `JSON restore: ${data.projs?Object.keys(data.projs).length:0} villas`);
+    toast('Backup restored','success',20000,{label:'Undo',fn:()=>{
+      Store.saveProjects(snapshot.projs); Store.saveTasksMap(snapshot.tasks); Store.saveResources(snapshot.resources);
+      Store.flush(); _refreshViews({sb:true});
+      toast('Restore undone','success');
+    }});
+  };
+  reader.readAsText(f);
+}
+
 
 function toggleExportDrop(e){
   e.stopPropagation();

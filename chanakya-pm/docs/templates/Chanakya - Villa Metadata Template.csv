@@ -1,0 +1,22 @@
+# CHANAKYA — VILLA METADATA TEMPLATE  |  one row per villa  |  used to create or update villa records
+# Required: Villa Code, Excavation Start
+# Optional: everything else (sensible defaults will be used)
+# Date format: DD-MMM-YY (e.g. 02-Apr-26).  YYYY-MM-DD and DD/MM/YYYY are also accepted.
+# Dev defaults to "Amanvana" if blank.  Phase defaults to "Phase 1".
+# Status accepts: Sold | Unsold | Reserved | Booked  (free text — anything is allowed; goes into notes if unrecognised)
+#
+# DELETE THESE COMMENT LINES BEFORE UPLOADING (any row starting with # is ignored on import — but cleaner files are easier to review).
+#
+Villa Code,Villa Name,Block,Zone,Contractor,Phase,Sale Status,Excavation Start,Target Handover,PM,Site Supervisor,Budget (INR),Area (sqm),Notes
+V32,V32,Block 10,Zone 2,Charge Infra,Phase 1,Sold,02-Apr-26,26-Apr-28,Vandana P,Stanly John,40000000,480,Premium plot
+V33,V33,Block 10,Zone 2,Charge Infra,Phase 1,Unsold,02-Apr-26,26-Apr-28,Vandana P,Stanly John,40000000,480,
+V34,V34,Block 10,Zone 2,Charge Infra,Phase 1,Sold,11-Apr-26,05-May-28,Praveer C,Stanly John,40000000,480,
+V35,V35,Block 10,Zone 2,Charge Infra,Phase 1,Unsold,11-Apr-26,05-May-28,Praveer C,Stanly John,40000000,480,
+V36,V36,Block 10,Zone 2,Charge Infra,Phase 1,Sold,25-Apr-26,19-May-28,Dinesh,Stanly John,40000000,480,
+V37,V37,Block 10,Zone 2,Charge Infra,Phase 1,Unsold,25-Apr-26,19-May-28,Dinesh,Stanly John,40000000,480,
+V12,V12,Block 4,Zone 1,A&T,Phase 1,Sold,02-Apr-26,26-Apr-28,Shraddha B,Stanly John,40000000,480,
+V13,V13,Block 4,Zone 1,A&T,Phase 1,Unsold,02-Apr-26,26-Apr-28,Shraddha B,Stanly John,40000000,480,
+V14,V14,Block 4,Zone 1,A&T,Phase 1,Sold,02-Apr-26,26-Apr-28,Shraddha B,Stanly John,40000000,480,
+V65,V65,Block 20,Zone 3,TBD,Phase 1,Unsold,24-Apr-26,18-May-28,Madhavarajan S,Stanly John,40000000,480,
+V66,V66,Block 20,Zone 3,TBD,Phase 1,Unsold,24-Apr-26,18-May-28,Madhavarajan S,Stanly John,40000000,480,
+V67,V67,Block 20,Zone 3,TBD,Phase 1,Unsold,24-Apr-26,18-May-28,Madhavarajan S,Stanly John,40000000,480,

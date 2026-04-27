@@ -1,0 +1,101 @@
+# CHANAKYA — PER-VILLA TASK TEMPLATE  |  one row per task  |  applies to one villa or many at once
+#
+# Required: Activity Name, Duration (Days)
+# Optional: WBS (auto-generated if blank), Predecessor, Constraint, Notes
+#
+# PHASE GROUPING — rows beginning with "▌" are SECTION HEADERS, not tasks.
+# Every task row that follows belongs to the most recent section above it,
+# until the next "▌" row appears. Use whatever phase names match the
+# contractor's conventions — Chanakya stores them as written, with no
+# enforced vocabulary. Same phase name across rows = grouped together.
+#
+# PREDECESSOR FORMAT — the killer feature.
+#   Empty / "—" / "0"     →  no predecessor (project-start anchor)
+#   "3"                   →  Activity ID 3, Finish-to-Start, 0-day lag (the default)
+#   "3FS"                 →  same as "3"
+#   "3FS+7"               →  Activity 3, FS, with a 7-day lag after finish
+#   "3SS"                 →  Start-to-Start with Activity 3 (same start day)
+#   "3SS+5"               →  starts 5 days after Activity 3 starts
+#   "3FF"                 →  Finish-to-Finish (same finish day as Activity 3)
+#   "3SF-2"               →  Start-to-Finish with -2 day lag (rare — finish 2 days before Act 3 starts)
+#   "3FS,5SS+1"           →  multiple predecessors, comma-separated
+#
+# CONSTRAINT (optional) — asap (default) | alap | mso (must-start-on) | mfo (must-finish-on)
+#                       | snet (start-no-earlier-than) | fnet (finish-no-earlier-than)
+#
+# DELETE THESE COMMENT LINES BEFORE UPLOADING.
+#
+ID,WBS,Activity Name,Duration (Days),Predecessor,Constraint,Notes
+,,▌ FOUNDATION / SUBSTRUCTURE,,,,
+1,S.1,Earthwork Excavation — Footing & Plinth Beam,5,,,Project start / mobilisation complete
+2,S.2,Anti-Termite Treatment,1,1FS,,
+3,S.3,Footing PCC,1,1FS,,
+4,S.4,Footing Reinforcement,5,3FS+7,,7-day cure after PCC
+5,S.5,Footing Concrete Pour,1,4FS,,
+6,S.6,Plinth Beam Reinforcement,4,5FS+7,,
+7,S.7,Plinth Beam Concrete,1,6FS,,
+8,S.8,Backfilling & Compaction,3,7FS+3,,
+,,▌ STRUCTURE — GROUND FLOOR,,,,
+9,S.9,GF Columns Reinforcement,6,8FS,,
+10,S.10,GF Columns Concrete,1,9FS,,
+11,S.11,GF Slab Formwork,4,10FS+7,,
+12,S.12,GF Slab Reinforcement,5,11FS,,
+13,S.13,GF Slab Concrete Pour ★,1,12FS,,Milestone — handover-critical
+,,▌ STRUCTURE — FIRST FLOOR,,,,
+14,S.14,FF Columns Reinforcement,6,13FS+14,,14-day cure after slab
+15,S.15,FF Columns Concrete,1,14FS,,
+16,S.16,FF Slab Formwork,4,15FS+7,,
+17,S.17,FF Slab Concrete Pour ★,1,16FS+5,,Milestone
+,,▌ STRUCTURE — SECOND FLOOR / TERRACE,,,,
+18,S.18,SF Columns,7,17FS+14,,
+19,S.19,Terrace Slab Concrete ★,1,18FS+12,,Milestone
+,,▌ EXTERNAL ENVELOPE,,,,
+20,S.20,External Brickwork — All Floors,18,19FS+7,,
+21,S.21,External Plastering,15,20FS+3,,
+22,S.22,Window Frame Installation,8,20SS+5,,Can start after walls begin
+23,S.23,Roof Waterproofing,7,19FS+5,,
+,,▌ MEP ROUGH-IN,,,,
+24,S.24,Electrical Conduit GF,6,11SS+2,,Embedded in slab
+25,S.25,Plumbing Rough-In GF,7,11SS+2,,
+26,S.26,HVAC Ductwork GF,5,13FS+5,,
+27,S.27,Electrical Conduit FF,6,16SS+2,,
+28,S.28,Plumbing Rough-In FF,7,16SS+2,,
+,,▌ INTERIOR PARTITIONS & PLASTERING,,,,
+29,S.29,Internal Brickwork,12,21FS,,
+30,S.30,Internal Plastering,10,29FS,,
+31,S.31,Ceiling Suspension Frame,4,30FS,,
+,,▌ MEP SECOND FIX,,,,
+32,S.32,Electrical Wiring Pull-Through,6,31FS,,
+33,S.33,Plumbing Final Connections,5,30FS,,
+34,S.34,HVAC Indoor Units,4,32FS+3,,
+,,▌ INTERIOR FINISHES,,,,
+35,S.35,Tile Flooring — Common Areas,8,33FS,,
+36,S.36,Wood Flooring — Bedrooms,6,35FS+2,,
+37,S.37,False Ceiling Installation,5,34FS,,
+38,S.38,Joinery — Doors & Frames,7,30FS+5,,
+39,S.39,Kitchen Cabinets & Worktop,8,35FS,,
+40,S.40,Bathroom Fittings & Sanitaryware,6,33FS+3,,
+,,▌ PAINTING & DECORATING,,,,
+41,S.41,Internal Paint — Primer,4,37FS,,
+42,S.42,Internal Paint — 2 Coats,6,41FS+1,,
+43,S.43,External Paint,8,21FS+30,,Allow plaster to fully cure
+,,▌ FF&E,,,,
+44,S.44,Light Fixtures & Switches,3,42FS,,
+45,S.45,Furniture Delivery & Placement,4,44FS,,
+,,▌ SMART HOME & AUTOMATION,,,,
+46,S.46,Smart Home Hub & Controllers,3,44FS,,
+47,S.47,Sensors, Locks & Cameras,4,46FS,,
+,,▌ EXTERNAL WORKS,,,,
+48,S.48,Driveway & Hardscape,10,23FS+7,,
+49,S.49,Boundary Wall & Gate,8,48SS,,
+,,▌ LANDSCAPING,,,,
+50,S.50,Soft Landscaping & Planting,7,49FS,,
+51,S.51,Garden Lighting & Irrigation,4,50FS,,
+,,▌ HANDOVER & SNAGGING,,,,
+52,S.52,Snagging Inspection ★,2,"45FS,47FS,51FS",,Milestone — all trades done
+53,S.53,De-Snagging Works,5,52FS,,
+54,S.54,Final Cleaning,2,53FS,,
+55,S.55,Client Handover ★,1,54FS,,Milestone — final
+# That's all you need to know. Phase names are stored as written, so use
+# whatever wording the contractor uses on this villa. Different villas can
+# use different phase names — the importer doesn't enforce a vocabulary.
