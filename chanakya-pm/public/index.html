@@ -262,18 +262,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .save-banner .sb-action:hover{background:rgba(255,255,255,.35)}
 .save-block-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.08);display:none;cursor:not-allowed}
 .save-block-overlay.visible{display:block}
-/* ── First-use welcome overlay (one per browser, dismissible) ── */
-.welcome-ov{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;background:rgba(26,20,16,0.7);backdrop-filter:blur(6px);font-family:inherit}
-.welcome-ov.visible{display:flex}
-.welcome-card{background:var(--surface,#fff);max-width:520px;width:calc(100% - 32px);max-height:calc(100vh - 60px);overflow-y:auto;border-radius:16px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'DM Sans',sans-serif;color:var(--text,#1a1714)}
-.welcome-card h2{font-family:'DM Serif Display',serif;font-weight:400;font-size:24px;line-height:1.2;margin:0 0 8px 0;color:var(--text,#1a1714)}
-.welcome-card .sub{font-size:13px;color:var(--text-muted,#7a7267);margin-bottom:20px;line-height:1.5}
-.welcome-card .item{display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--border,#e2ddd4)}
-.welcome-card .item:first-of-type{border-top:none;padding-top:4px}
-.welcome-card .item .ico{flex-shrink:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1}
-.welcome-card .item .body{flex:1;font-size:13px;line-height:1.55}
-.welcome-card .item .body strong.label{display:block;font-weight:700;font-size:11px;letter-spacing:.06em;color:var(--text,#1a1714);margin-bottom:3px;text-transform:uppercase}
-.welcome-card .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border,#e2ddd4)}
 @keyframes tin{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:600;min-width:170px;padding:4px;display:none}
@@ -1488,46 +1476,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <div class="toast-box" id="toastBox"></div>
 <div class="save-banner" id="saveBanner" role="alert" aria-live="polite"></div>
 <div class="save-block-overlay" id="saveBlockOverlay" title="Editing is paused — save hasn't succeeded in 30+ seconds"></div>
-
-<!-- First-use welcome overlay (shown once per browser, dismissible) -->
-<div class="welcome-ov" id="welcomeOv" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
-  <div class="welcome-card">
-    <h2 id="welcomeTitle">Welcome to Chanakya</h2>
-    <div class="sub" id="welcomeSub">A brief introduction before you begin.</div>
-    <div class="item">
-      <div class="ico">🏡</div>
-      <div class="body">
-        <strong class="label">Select your development</strong>
-        Click <em>Open Dashboard →</em> on the development you work with, Amanvana or Kandhavara. The badge beside the Chanakya logo, top-left, lets you switch developments at any time.
-      </div>
-    </div>
-    <div class="item">
-      <div class="ico">✏️</div>
-      <div class="body">
-        <strong class="label">Edits save automatically</strong>
-        Every change reaches the server within approximately 1.5 seconds. Teammates see your edits on their next refresh. If two users save the same villa simultaneously, you will see <em>"Another user saved…"</em>. Simply click <em>Reload</em> and re-enter the change.
-      </div>
-    </div>
-    <div class="item">
-      <div class="ico">↺</div>
-      <div class="body">
-        <strong class="label">Most actions are reversible</strong>
-        If a task is deleted by mistake, or a Gantt bar is dragged to the wrong date, click <em>Undo</em> on the toast that appears. The undo option remains available for 20 seconds.
-      </div>
-    </div>
-    <div class="item">
-      <div class="ico">📋</div>
-      <div class="body">
-        <strong class="label">Support</strong>
-        The full training guide is available on the team's shared drive. For any other questions, please contact the Product and Tech team.
-      </div>
-    </div>
-    <div class="actions">
-      <button class="btn btn-ghost btn-sm" onclick="_dismissWelcome(false)">Show again next time</button>
-      <button class="btn btn-primary btn-sm" onclick="_dismissWelcome(true)">Got it, let's start</button>
-    </div>
-  </div>
-</div>
 
 <!-- ═══════════════════════════════════════════════════════
      BASELINE: CREATE MODAL
@@ -13593,33 +13541,9 @@ async function _handleGoogleToken(tokenResponse){
   }
 }
 
-// Show the welcome overlay on first sign-in (per browser).
-// Bumping the storage-key suffix forces every existing user to see it
-// once again — useful when content is updated for a new release.
-const _WELCOME_KEY = '_cky_welcome_v1_seen';
-function _maybeShowWelcome(){
-  try{
-    if(localStorage.getItem(_WELCOME_KEY) === 'yes') return;
-    const ov = document.getElementById('welcomeOv'); if(!ov) return;
-    const sub = document.getElementById('welcomeSub');
-    if(sub && _currentUser?.name){ sub.textContent = `Hi ${_currentUser.name.split(' ')[0]} — a few quick things before you start.`; }
-    ov.classList.add('visible');
-    // Esc dismisses (without persisting)
-    const onKey = (e)=>{ if(e.key==='Escape'){ _dismissWelcome(false); document.removeEventListener('keydown', onKey); } };
-    document.addEventListener('keydown', onKey);
-  }catch(e){ /* localStorage may be blocked — fail silent */ }
-}
-function _dismissWelcome(persist){
-  const ov = document.getElementById('welcomeOv'); if(!ov) return;
-  ov.classList.remove('visible');
-  if(persist){ try{ localStorage.setItem(_WELCOME_KEY, 'yes'); }catch(e){} }
-}
-
 function showSelectScreen(){
   if(!_currentUser)return;
   $('sel-user').textContent='Signed in as '+_currentUser.name;
-  // First-time welcome (does nothing on subsequent visits)
-  _maybeShowWelcome();
   const projs=Object.values(Store.getProjects()), tasksAll=Store.getAllTasks();
   // Update Amanvana / Kandhavara stat tiles
   ['Amanvana','Kandhavara'].forEach(dev=>{
